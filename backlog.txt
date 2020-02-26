@@ -1,0 +1,14 @@
+- put on github
+- put on portfolio
+
+- load mvSmooth file
+- auto-load mvSmooth file (on changed)
+- auto-save obj file along with palette
+
+- get voxel hovering working (print to console)
+- shader to highlight a hovered voxel
+- allow disabling smoothing voxel (click-to-toggle)
+- allow removing original voxel (click to toggle)
+- auto-save mvSmooth file
+
+- have pattern be defined once and then rotate-checked

@@ -1,0 +1,94 @@
+<html>
+	<head>
+		<title>MagicaVoxel Smoother</title>
+		<link rel='icon' type='image/png' href='favicon.png'/>
+		<script src='libs/fileUpdatedListeners.js'></script>
+		<script src='libs/voxParser.js'></script>
+		<script src='libs/smootherLogic.js'></script>
+		<script src='libs/glMatrix.js'></script>
+		<script src='libs/webgl.js'></script>
+		<script src='libs/cam_orbit.js'></script>
+		<script src='libs/meshes.js'></script>
+		<script src='libs/smootherRenderLogic.js'></script>
+		<style>
+			.fatalErr
+			{
+				background-color: red;
+				text-align: center;
+				font-size: 150%;
+				font-weight: bold;
+				color: yellow;
+			}
+			body
+			{
+				display: flex;
+				flex-flow: column;
+			}
+			#head
+			{
+				flex: 0 1 auto;
+				margin-bottom: 0.5em;
+			}
+			#view
+			{
+				flex: 1 1 auto;
+			}
+		</style>
+	</head>
+	<body onload='main()'>
+		<div id='head'>
+			<input type='file' id='fileSelect' accept='.vox'/>
+			<input type='checkbox' id='showSmooth' checked>Show smoothing</input>
+		</div>
+		<canvas id='view'></canvas>
+	</body>
+</html>
+
+<script>
+	let voxData;
+	const meshes = {};
+	let shader;
+
+	function main()
+	{
+		// 3d stuff
+		if (!initRendering())
+		{
+			return;
+		}
+
+		// file handling
+		fileUpdatedListeners.add(document.getElementById("fileSelect"), onFileUpdated);
+		document.getElementById("fileSelect").addEventListener("change", onFileSelect);
+
+		// Start frame looping
+		requestAnimationFrame(frameLogic);
+	}
+
+	// Destroys all content except for error message
+	function onFatalError(error)
+	{
+		document.getElementsByTagName("body")[0].innerHTML = "<div class='fatalErr'>" + error + "</div";
+		return false;
+	}
+
+	// Each time a file is selected
+	function onFileSelect(evt)
+	{
+		resetCamOrbit();
+	}
+
+	// Called each time source model file changes
+	// Loads and prepares voxel data
+	function onFileUpdated(file)
+	{
+		console.log("Vox modified externally");
+		const reader = new FileReader();
+		reader.onload = function()
+		{
+			voxData = parseVox(reader.result);
+			smoother_processVoxData(voxData);
+		};
+		reader.readAsArrayBuffer(file);
+	}
+</script>
