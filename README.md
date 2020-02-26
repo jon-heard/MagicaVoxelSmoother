@@ -1,5 +1,5 @@
 # MagicaVoxelSmoother
-Open MagicaVoxel model, add smoothing and export to OBJ format.  Resmooths &amp; reexports when source model changes.
+Opens a MagicaVoxel model, adds smoothing and exports to OBJ format.  Re-smooths &amp; re-exports when source model changes.
 
-![Voxel gnome smoothed](master/demos/gnome.png)
-![Voxel robot smoothed](master/demos/robot.png)
+![Voxel gnome smoothed](https://raw.githubusercontent.com/jon-heard/MagicaVoxelSmoother/master/demos/gnome.png)
+![Voxel robot smoothed](https://raw.githubusercontent.com/jon-heard/MagicaVoxelSmoother/master/demos/robot.png)
