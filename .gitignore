@@ -1,0 +1,4 @@
+_research/*
+data/*.obj
+data/*.mtl
+data/*.png

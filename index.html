@@ -38,7 +38,7 @@
 			{
 				display: none;
 			}
-			#voxfileName, #mvsFileName, #objFileName
+			#voxfilename, #mvsFilename, #objFilename
 			{
 				padding: 0em 1em;
 				border: 1px solid black;
@@ -53,10 +53,10 @@
 	<body onload='main()'>
 		<div id='head'>
 			<button id='voxFileSelector'>Open VOX model</button>
-			<span id='voxFileName'></span>
+			<span id='voxFilename'></span>
 			<button id='mvsFileSelector'>Open smoothing config</button>
-			<span id='mvsFileName'></span>
-			<span id='objFileName'></span>
+			<span id='mvsFilename'></span>
+			<span id='objFilename'></span>
 			<button id='manualExport'>Export OBJ model</button>
 			<input type='file' id='hiddenVoxFileSelector' accept='.vox'/>
 			<input type='file' id='hiddenMvsFileSelector' accept='.mvs'/>
@@ -69,7 +69,7 @@
 <script>
 	let voxData;
 	let usingNativeFileIO = true;
-	let voxFile, mvsFile, objFile;
+	let voxFile, mvsFile, objFile, pngFile, mtlFile;
 
 	function main()
 	{
@@ -84,19 +84,19 @@
 		{
 			usingNativeFileIO = false;
 			alert("This web app works best with chrome's 'Native File System API', through which it can auto-export the OBJ file as you work.\nYou can enable this experimental feature at 'chrome://flags/'.");
-			document.getElementById("objFileName").style.display = "none";
+			document.getElementById("objFilename").style.display = "none";
+			document.getElementById("mvsFileSelector").addEventListener("click", onMvsFileSelectorClicked);
+			document.getElementById("hiddenVoxFileSelector").addEventListener("change", onFileSelect);
+			document.getElementById("manualExport").addEventListener("click", onManualExport);
+			document.getElementById("voxFileSelector").addEventListener("click", onVoxFileSelectorClicked);
+			fileUpdatedListeners.add(document.getElementById("hiddenVoxFileSelector"), onVoxFileUpdated);
+			fileUpdatedListeners.add(document.getElementById("hiddenMvsFileSelector"), onMvsFileUpdated);
 		}
 		else
 		{
 			document.getElementById("mvsFileSelector").style.display = "none";
+			document.getElementById("voxFileSelector").addEventListener("click", onVoxOpenClicked);
 		}
-
-		document.getElementById("voxFileSelector").addEventListener("click", onVoxFileSelectorClicked);
-		document.getElementById("mvsFileSelector").addEventListener("click", onMvsFileSelectorClicked);
-		fileUpdatedListeners.add(document.getElementById("hiddenVoxFileSelector"), onVoxFileUpdated);
-		document.getElementById("hiddenVoxFileSelector").addEventListener("change", onFileSelect);
-		fileUpdatedListeners.add(document.getElementById("hiddenMvsFileSelector"), onMvsFileUpdated);
-		document.getElementById("manualExport").addEventListener("click", onManualExport);
 
 		// Start frame looping
 		requestAnimationFrame(frameLogic);
@@ -124,10 +124,17 @@
 		const reader = new FileReader();
 		reader.onload = function()
 		{
-			document.getElementById('voxFileName').innerHTML = file.name;
+			document.getElementById('voxFilename').innerHTML = file.name;
 			voxData = parseVox(reader.result);
 			smoother_processVoxData(voxData);
-			document.getElementById("manualExport").style.display = "unset";
+			if (usingNativeFileIO)
+			{
+				autoExport();
+			}
+			else
+			{
+				document.getElementById("manualExport").style.display = "unset";
+			}
 		};
 		reader.readAsArrayBuffer(file);
 	}
@@ -139,9 +146,13 @@
 		const reader = new FileReader();
 		reader.onload = function()
 		{
-			document.getElementById('mvsFileName').innerHTML = file.name;
+			document.getElementById('mvsFilename').innerHTML = file.name;
 			smootherConfig = JSON.parse(bin2Str(reader.result, 0, reader.result.byteLength));
 			processConfigData(voxData);
+			if (usingNativeFileIO)
+			{
+				autoExport();
+			}
 		};
 		reader.readAsArrayBuffer(file);
 	}
@@ -156,33 +167,49 @@
 			element.dispatchEvent(evt);
 		}
 	}
-	async function onVoxFileSelectorClicked()
+	function onVoxFileSelectorClicked()
 	{
-		if (usingNativeFileIO)
+		clickElement(document.getElementById("hiddenVoxFileSelector"));
+	}
+
+	async function onVoxOpenClicked()
+	{
+		try
 		{
+			alert("Choose the MagicaVoxel model to smooth");
+			let newVoxFile = await chooseFileSystemEntries({ type: "openFile", excludeAcceptAllOption: true, accepts: [{ description: "VOX - MagicaVoxel model", extensions: ["vox"]}] });
+			let newMvsFile;
 			try
 			{
-				newVoxFile = await chooseFileSystemEntries({ type: "openFile", excludeAcceptAllOption: true, accepts: [{ description: "MagicaVoxel model", extensions: ["vox"]}] });
-				try
-				{
-					newMvsFile = await chooseFileSystemEntries({ type: "openFile", excludeAcceptAllOption: true, accepts: [{ description: "MagicaVoxel smooth customization", extensions: ["mvSmooth"]}] });
-				}
-				catch (exception)
-				{
-					newMvsFile = await chooseFileSystemEntries({ type: "saveFile", excludeAcceptAllOption: true, accepts: [{ description: "MagicaVoxel smooth customization", extensions: ["mvSmooth"]}] });
-				}
-				newObjHandle = await chooseFileSystemEntries({ type: "saveFile", excludeAcceptAllOption: true, accepts: [{ description: "Exported OBJ", extensions: ["obj"]}] });
-				voxHandle = newVoxHandle;
-				customHandle = newCustomHandle;
-				objHandle = newObjHandle;
-				document.getElementById("result").innerHTML = "vox = " + newVoxHandle.name + " :: customization = " + (customHandle?customHandle.name:"none") + " :: object export = " + objHandle.name;
+				alert("Choose an existing smoothing configuration file (optional).");
+				newMvsFile = await chooseFileSystemEntries({ type: "openFile", excludeAcceptAllOption: true, accepts: [{ description: "MVS - MagicaVoxel smooth customization", extensions: ["mvs"]}] });
 			}
-			catch (exception) {}
+			catch (exception)
+			{
+				alert("You did not select an existing smoothing configuration.\nPlease create a new smoothing configuration instead.");
+				newMvsFile = await chooseFileSystemEntries({ type: "saveFile", excludeAcceptAllOption: true, accepts: [{ description: "MVS - MagicaVoxel smooth customization", extensions: ["mvs"]}] });
+			}
+			alert("Create a 3d model file to export the smoothing to.");
+			let newObjFile = await chooseFileSystemEntries({ type: "saveFile", excludeAcceptAllOption: true, accepts: [{ description: "OBJ - 3D model", extensions: ["obj"]}] });
+			alert("Create a texture file to export the smoothing to.");
+			let newPngFile = await chooseFileSystemEntries({ type: "saveFile", excludeAcceptAllOption: true, accepts: [{ description: "PNG - 3d model texture", extensions: ["png"]}] });
+			alert("Create a material file to attach the texture to the model.");
+			let newMtlFile = await chooseFileSystemEntries({ type: "saveFile", excludeAcceptAllOption: true, accepts: [{ description: "MTL - 3D model material", extensions: ["mtl"]}] });
+
+			voxFile = newVoxFile;
+			mvsFile = newMvsFile;
+			objFile = newObjFile;
+			pngFile = newPngFile;
+			mtlFile = newMtlFile;
+
+			document.getElementById("voxFilename").innerHTML = voxFile.name;
+			document.getElementById("mvsFilename").innerHTML = mvsFile.name;
+			document.getElementById("objFilename").innerHTML = objFile.name;
+
+			fileUpdatedListeners.add(await voxFile, onVoxFileUpdated);
+			fileUpdatedListeners.add(await mvsFile, onMvsFileUpdated);
 		}
-		else
-		{
-			clickElement(document.getElementById("hiddenVoxFileSelector"));
-		}
+		catch (exception) { console.log("File select was canceled or failed"); }
 	}
 
 	function onMvsFileSelectorClicked()
@@ -210,10 +237,41 @@
 
 	function onManualExport()
 	{
-		let modelName = document.getElementById("hiddenVoxFileSelector").files[0].name.replace(".vox", "");
-		let objModel = exportObj(modelName, voxData);
+		let modelName = document.getElementById("voxFilename").innerHTML.replace(".vox", "");
+		let objModel = exportObj(modelName + ".mtl", modelName + ".png", voxData);
 		downloadNewFile(modelName + ".obj", objModel.obj);
 		downloadNewFile(modelName + ".mtl", objModel.mtl);
 		downloadNewFile(modelName + ".png", objModel.png, true);
+	}
+
+	function base64ToArrayBuffer(base64)
+	{
+		var binary_string =  window.atob(base64);
+		var len = binary_string.length;
+		var bytes = new Uint8Array( len );
+		for (var i = 0; i < len; i++)
+		{
+			bytes[i] = binary_string.charCodeAt(i);
+		}
+		return bytes.buffer;
+	}
+
+	async function autoExport()
+	{
+		let mtlName = (await mtlFile.getFile()).name;
+		let pngName = (await pngFile.getFile()).name;
+		let objModel = exportObj(mtlName, pngName, voxData);
+
+		const objWriter = await objFile.createWriter();
+		await objWriter.write(0, objModel.obj);
+		await objWriter.close();
+
+		const mtlWriter = await mtlFile.createWriter();
+		await mtlWriter.write(0, objModel.mtl);
+		await mtlWriter.close();
+
+		const pngWriter = await pngFile.createWriter();
+		await pngWriter.write(0, base64ToArrayBuffer(objModel.png.replace("data:image/png;base64,", "")));
+		await pngWriter.close();
 	}
 </script>

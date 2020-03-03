@@ -1,46 +1,111 @@
 
 fileUpdatedListeners = {
 	inited: false,
-	fileUis: [],
+	listeners: [],
+	fileType: Object.freeze({ FILE_SELECTOR: 1, NATIVE_FILE: 2, UNKNOWN: 3 }),
 
-	add: function(fileUi, callback)
+	add: function(file, callback)
 	{
-		fileUpdatedListeners.fileUis.push({ ui: fileUi, callback: callback, modDate: new Date() });
-		fileUi.addEventListener("change", fileUpdatedListeners.onFileUiChanged);
+		// Init system if not already inited
 		if (!fileUpdatedListeners.inited)
 		{
 			window.addEventListener("focus", fileUpdatedListeners.onPageFocused);
 			fileUpdatedListeners.onPageFocused();
 			fileUpdatedListeners.inited = true;
 		}
+
+		// Work out the type
+		let fileType = fileUpdatedListeners.fileType.UNKNOWN;
+		if (file instanceof HTMLInputElement)
+		{
+			fileType = fileUpdatedListeners.fileType.FILE_SELECTOR;
+		}
+		else if (file instanceof FileSystemFileHandle)
+		{
+			fileType = fileUpdatedListeners.fileType.NATIVE_FILE;
+		}
+
+		// Add the listener
+		fileUpdatedListeners.listeners.push({ file: file, callback: callback, modDate: new Date(), type: fileType });
+
+		// React to user changing the selected file
+		if (fileType == fileUpdatedListeners.fileType.FILE_SELECTOR)
+		{
+			file.addEventListener("change", fileUpdatedListeners.onFileChanged);
+		}
+		else if(fileType == fileUpdatedListeners.fileType.NATIVE_FILE)
+		{
+			fileUpdatedListeners.onPageFocused();
+		}
 	},
 
-	onPageFocused: function()
+	isFileReady: function(listener)
 	{
-		const fileUis = fileUpdatedListeners.fileUis;
-		for (let i = 0; i < fileUis.length; i++)
+		switch (listener.type)
 		{
-			if (fileUis[i].ui.files.length > 0)
+			case fileUpdatedListeners.fileType.FILE_SELECTOR:
+				return (listener.file.files.length > 0);
+			case fileUpdatedListeners.fileType.NATIVE_FILE:
+				return true;
+			case fileUpdatedListeners.fileType.UNKNOWN:
+				return false;
+		}
+	},
+
+	getLastModified: async function(listener)
+	{
+		switch (listener.type)
+		{
+			case fileUpdatedListeners.fileType.FILE_SELECTOR:
+				return new Date(listener.file.files[0].lastModified)
+			case fileUpdatedListeners.fileType.NATIVE_FILE:
+				let file = await listener.file.getFile();
+				return new Date(file.lastModified)
+			case fileUpdatedListeners.fileType.UNKNOWN:
+				return null;
+		}
+	},
+
+	getJsFile: async function(listener)
+	{
+		switch (listener.type)
+		{
+			case fileUpdatedListeners.fileType.FILE_SELECTOR:
+				return listener.file.files[0];
+			case fileUpdatedListeners.fileType.NATIVE_FILE:
+				let file = await listener.file.getFile();
+				return file;
+			case fileUpdatedListeners.fileType.UNKNOWN:
+				return null;
+		}
+	},
+
+	onPageFocused: async function()
+	{
+		const listeners = fileUpdatedListeners.listeners;
+		for (let i = 0; i < listeners.length; i++)
+		{
+			if (fileUpdatedListeners.isFileReady(listeners[i]))
 			{
-				const newModDate = new Date(fileUis[i].ui.files[0].lastModified);
-				if (newModDate.getTime() != fileUis[i].modDate.getTime())
+				const newModDate = await fileUpdatedListeners.getLastModified(listeners[i]);
+				if (newModDate.getTime() != listeners[i].modDate.getTime())
 				{
-					fileUis[i].callback(fileUis[i].ui.files[0]);
-					fileUis[i].modDate = newModDate;
+					listeners[i].callback(await fileUpdatedListeners.getJsFile(listeners[i]));
+					listeners[i].modDate = newModDate;
 				}
 			}
 		}
 	},
 
-	onFileUiChanged: function(evt)
+	onFileChanged: function(evt)
 	{
-		const fileUis = fileUpdatedListeners.fileUis;
-		for (let i = 0; i < fileUis.length; i++)
+		const listeners = fileUpdatedListeners.listeners;
+		for (let i = 0; i < listeners.length; i++)
 		{
-			if (fileUis[i].ui == evt.target)
+			if (listeners[i].file == evt.target)
 			{
-				fileUis[i].callback(fileUis[i].ui.files[0]);
-				fileUis[i].modDate = new Date(fileUis[i].ui.files[0].lastModified);
+				listeners[i].callback(listeners[i].file.files[0]);
+				listeners[i].modDate = new Date(listeners[i].file.files[0].lastModified);
 			}
 		}
 	}

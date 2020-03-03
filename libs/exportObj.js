@@ -1,5 +1,5 @@
 
-function exportObj(name, data)
+function exportObj(mtlName, pngName, data)
 {
 	let v = [];			// vertices
 	let vt_indexToColor = [];	// Need to save colors by contiguous index
@@ -90,7 +90,7 @@ function exportObj(name, data)
 
 	// Create OBJ string
 	let result = {};
-	result.obj = "mtllib " + name + ".mtl\nusemtl palette\n";
+	result.obj = "mtllib " + mtlName + "\nusemtl palette\n";
 	for (let i = 0; i < v.length; i++)
 	{
 		result.obj += "v " + (v[i].x*-1) + " " + v[i].z + " " + v[i].y + "\n";
@@ -105,7 +105,7 @@ function exportObj(name, data)
 	}
 
 	// Create MTL string
-	result.mtl = "newmtl palette\nmap_Kd " + name + ".png";
+	result.mtl = "newmtl palette\nmap_Kd " + pngName;
 
 	// Create PNG img
 	let canvas = document.createElement('canvas');
