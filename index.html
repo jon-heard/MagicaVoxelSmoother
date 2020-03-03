@@ -52,8 +52,9 @@
 	</head>
 	<body onload='main()'>
 		<div id='head'>
-			<button id='fileSelector'>Open VOX model</button>
+			<button id='voxFileSelector'>Open VOX model</button>
 			<span id='voxFileName'></span>
+			<button id='mvsFileSelector'>Open smoothing config</button>
 			<span id='mvsFileName'></span>
 			<span id='objFileName'></span>
 			<button id='manualExport'>Export OBJ model</button>
@@ -85,8 +86,13 @@
 			alert("This web app works best with chrome's 'Native File System API', through which it can auto-export the OBJ file as you work.\nYou can enable this experimental feature at 'chrome://flags/'.");
 			document.getElementById("objFileName").style.display = "none";
 		}
+		else
+		{
+			document.getElementById("mvsFileSelector").style.display = "none";
+		}
 
-		document.getElementById("fileSelector").addEventListener("click", onFileSelectorClicked);
+		document.getElementById("voxFileSelector").addEventListener("click", onVoxFileSelectorClicked);
+		document.getElementById("mvsFileSelector").addEventListener("click", onMvsFileSelectorClicked);
 		fileUpdatedListeners.add(document.getElementById("hiddenVoxFileSelector"), onVoxFileUpdated);
 		document.getElementById("hiddenVoxFileSelector").addEventListener("change", onFileSelect);
 		fileUpdatedListeners.add(document.getElementById("hiddenMvsFileSelector"), onMvsFileUpdated);
@@ -107,7 +113,7 @@
 	function onFileSelect(evt)
 	{
 		resetCamOrbit();
-		setTimeout(function() { clickElement(document.getElementById("hiddenMvsFileSelector")); }, 250);
+		alert("Now choose an (optional) 'smoothing config' file to customize the smoothing.");
 	}
 
 	// Called each time source model file changes
@@ -150,15 +156,38 @@
 			element.dispatchEvent(evt);
 		}
 	}
-	function onFileSelectorClicked()
+	async function onVoxFileSelectorClicked()
 	{
 		if (usingNativeFileIO)
 		{
+			try
+			{
+				newVoxFile = await chooseFileSystemEntries({ type: "openFile", excludeAcceptAllOption: true, accepts: [{ description: "MagicaVoxel model", extensions: ["vox"]}] });
+				try
+				{
+					newMvsFile = await chooseFileSystemEntries({ type: "openFile", excludeAcceptAllOption: true, accepts: [{ description: "MagicaVoxel smooth customization", extensions: ["mvSmooth"]}] });
+				}
+				catch (exception)
+				{
+					newMvsFile = await chooseFileSystemEntries({ type: "saveFile", excludeAcceptAllOption: true, accepts: [{ description: "MagicaVoxel smooth customization", extensions: ["mvSmooth"]}] });
+				}
+				newObjHandle = await chooseFileSystemEntries({ type: "saveFile", excludeAcceptAllOption: true, accepts: [{ description: "Exported OBJ", extensions: ["obj"]}] });
+				voxHandle = newVoxHandle;
+				customHandle = newCustomHandle;
+				objHandle = newObjHandle;
+				document.getElementById("result").innerHTML = "vox = " + newVoxHandle.name + " :: customization = " + (customHandle?customHandle.name:"none") + " :: object export = " + objHandle.name;
+			}
+			catch (exception) {}
 		}
 		else
 		{
 			clickElement(document.getElementById("hiddenVoxFileSelector"));
 		}
+	}
+
+	function onMvsFileSelectorClicked()
+	{
+		clickElement(document.getElementById("hiddenMvsFileSelector"));
 	}
 
 	function downloadNewFile(filename, content, isRawContent)

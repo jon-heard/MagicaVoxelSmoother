@@ -1,15 +1,17 @@
 
 function exportObj(name, data)
 {
+	let v = [];			// vertices
+	let vt_indexToColor = [];	// Need to save colors by contiguous index
+	let vt_colorToIndex = {};	// Need to lookup color index by each voxel's color
+	let f = [];			// faces
+
 	// Fill OBJ data structure
-	let v = [];
-	let vt_colorToIndex = {};
-	let vt_indexToColor = [];
-	let f = [];
 	for (let i = 0; i < voxData.models.length; i++)
 	{
 		const model = voxData.models[i];
 
+		// Original Voxels
 		let mesh = meshes[SmoothType.ORIGINAL].mesh;
 		for (let i = 0; i < model.voxels.length; i++)
 		{
@@ -28,7 +30,7 @@ function exportObj(name, data)
 			else
 			{
 				vt_indexToColor.push(voxel.color);
-				colorIndex = vt_colorToIndex[voxel.color] = vt_indexToColor.length;
+				colorIndex = vt_colorToIndex[voxel.color] = vt_indexToColor.length; // OBJ has offset from 1, not 0
 			}
 
 			// vertices
@@ -46,6 +48,7 @@ function exportObj(name, data)
 			}
 		}
 
+		// Smoothing voxels
 		for (let i = 0; i < model.smoothVoxels.length; i++)
 		{
 			let voxel = model.smoothVoxels[i];
@@ -65,7 +68,7 @@ function exportObj(name, data)
 			else
 			{
 				vt_indexToColor.push(voxel.color);
-				colorIndex = vt_colorToIndex[voxel.color] = vt_indexToColor.length;
+				colorIndex = vt_colorToIndex[voxel.color] = vt_indexToColor.length; // OBJ has offset from 1, not 0
 			}
 
 			// vertices
