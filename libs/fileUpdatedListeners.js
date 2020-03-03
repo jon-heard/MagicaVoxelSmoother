@@ -11,7 +11,7 @@ fileUpdatedListeners = {
 		{
 			window.addEventListener("focus", fileUpdatedListeners.onPageFocused);
 			fileUpdatedListeners.onPageFocused();
-			onFileUpdated.inited = true;
+			fileUpdatedListeners.inited = true;
 		}
 	},
 

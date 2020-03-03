@@ -1,9 +1,4 @@
-- put on github
-- put on portfolio
-
-- load mvSmooth file
-- auto-load mvSmooth file (on changed)
-- auto-save obj file along with palette
+- add functionality for native api
 
 - get voxel hovering working (print to console)
 - shader to highlight a hovered voxel
@@ -12,3 +7,6 @@
 - auto-save mvSmooth file
 
 - have pattern be defined once and then rotate-checked
+- fix up and add to patterns
+
+- optimize exported OBJ file

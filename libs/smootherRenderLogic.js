@@ -2,6 +2,8 @@
 	let gl;
 	let canvasHeightOffset;
 	let showSmoothUi;
+	let shader;
+	const meshes = {};
 
 	// Each browser resize requires viewport recalculation
 	function onResize(evt)
@@ -10,6 +12,27 @@
 		gl.canvas.height = window.innerHeight - canvasHeightOffset - 1;
 		gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 		mat4.perspective(gl.projectionMatrix, 45 * Math.PI/180, gl.canvas.width / gl.canvas.height, 0.1, 1000.0);
+	}
+
+	function getOrientationMatrix(index)
+	{
+		const result = mat4.create();
+		switch (index)
+		{
+			case  1: mat4.rotate(result, result, 180*Math.PI/180, [0, 0, 1]); break;
+			case  2: mat4.rotate(result, result, 90*Math.PI/180, [0, 0, 1]); break;
+			case  3: mat4.rotate(result, result, -90*Math.PI/180, [0, 0, 1]); break;
+			case  4: mat4.rotate(result, result, 90*Math.PI/180, [0, 1, 0]); break;
+			case  5: mat4.rotate(result, result, -90*Math.PI/180, [0, 1, 0]); break;
+			case  6: mat4.rotate(result, result, 180*Math.PI/180, [0, 1, 0]); break;
+			case  7: mat4.rotate(result, result, 180*Math.PI/180, [0, 1, 0]); mat4.rotate(result, result, 90*Math.PI/180, [0, 0, 1]); break;
+			case  8: mat4.rotate(result, result, 180*Math.PI/180, [0, 1, 0]); mat4.rotate(result, result, -90*Math.PI/180, [0, 0, 1]); break;
+			case  9: mat4.rotate(result, result, 180*Math.PI/180, [0, 1, 0]); mat4.rotate(result, result, 180*Math.PI/180, [0, 0, 1]); break;
+			case 10: mat4.rotate(result, result, 90*Math.PI/180, [0, 1, 0]); mat4.rotate(result, result, 180*Math.PI/180, [0, 0, 1]); break;
+			case 11: mat4.rotate(result, result, -90*Math.PI/180, [0, 1, 0]); mat4.rotate(result, result, 180*Math.PI/180, [0, 0, 1]); break;
+			case 12: mat4.scale(result, result, [-1, 1, 1]); break;
+		}
+		return result;
 	}
 
 	// Init webgl
@@ -54,11 +77,11 @@
 		}
 
 		// Meshes
-		meshes[SmoothType.ORIGINAL] = createMesh_cube(gl);
-		meshes[SmoothType.CORNER] = createMesh_corner(gl);
-		meshes[SmoothType.EMBED] = createMesh_embed(gl);
-		meshes[SmoothType.OUTBED] = createMesh_outbed(gl);
-		meshes[SmoothType.SIDECORNER] = createMesh_sideCorner(gl);
+		meshes[SmoothType.ORIGINAL] = meshToGl(gl, createMesh_cube());
+		meshes[SmoothType.CORNER] = meshToGl(gl, createMesh_corner());
+		meshes[SmoothType.EMBED] = meshToGl(gl, createMesh_embed());
+		meshes[SmoothType.OUTBED] = meshToGl(gl, createMesh_outbed());
+		meshes[SmoothType.SIDECORNER] = meshToGl(gl, createMesh_sideCorner());
 
 		// Setup camera system
 		initCamOrbit();
@@ -115,21 +138,7 @@
 					let c = voxData.palette[v.color-1];
 					const modelViewMatrix = mat4.create();
 					mat4.translate(modelViewMatrix, modelViewMatrix, [v.x-s.x, v.y-s.y, v.z-s.z]);
-					switch (v.orientation)
-					{
-						case  1: mat4.rotate(modelViewMatrix, modelViewMatrix, 180*Math.PI/180, [0, 0, 1]); break;
-						case  2: mat4.rotate(modelViewMatrix, modelViewMatrix, 90*Math.PI/180, [0, 0, 1]); break;
-						case  3: mat4.rotate(modelViewMatrix, modelViewMatrix, -90*Math.PI/180, [0, 0, 1]); break;
-						case  4: mat4.rotate(modelViewMatrix, modelViewMatrix, 90*Math.PI/180, [0, 1, 0]); break;
-						case  5: mat4.rotate(modelViewMatrix, modelViewMatrix, -90*Math.PI/180, [0, 1, 0]); break;
-						case  6: mat4.rotate(modelViewMatrix, modelViewMatrix, 180*Math.PI/180, [0, 1, 0]); break;
-						case  7: mat4.rotate(modelViewMatrix, modelViewMatrix, 180*Math.PI/180, [0, 1, 0]); mat4.rotate(modelViewMatrix, modelViewMatrix, 90*Math.PI/180, [0, 0, 1]); break;
-						case  8: mat4.rotate(modelViewMatrix, modelViewMatrix, 180*Math.PI/180, [0, 1, 0]); mat4.rotate(modelViewMatrix, modelViewMatrix, -90*Math.PI/180, [0, 0, 1]); break;
-						case  9: mat4.rotate(modelViewMatrix, modelViewMatrix, 180*Math.PI/180, [0, 1, 0]); mat4.rotate(modelViewMatrix, modelViewMatrix, 180*Math.PI/180, [0, 0, 1]); break;
-						case 10: mat4.rotate(modelViewMatrix, modelViewMatrix, 90*Math.PI/180, [0, 1, 0]); mat4.rotate(modelViewMatrix, modelViewMatrix, 180*Math.PI/180, [0, 0, 1]); break;
-						case 11: mat4.rotate(modelViewMatrix, modelViewMatrix, -90*Math.PI/180, [0, 1, 0]); mat4.rotate(modelViewMatrix, modelViewMatrix, 180*Math.PI/180, [0, 0, 1]); break;
-						case 12: mat4.scale(modelViewMatrix, modelViewMatrix, [-1, 1, 1]); break;
-					}
+					mat4.multiply(modelViewMatrix, modelViewMatrix, getOrientationMatrix(v.orientation));
 					if (v.orientation > 11)
 					{
 						gl.frontFace(gl.CW);

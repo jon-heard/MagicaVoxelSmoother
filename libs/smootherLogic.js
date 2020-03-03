@@ -3,36 +3,7 @@ const SmoothType = Object.freeze({ NONE: 1, ORIGINAL: 2, CORNER: 3, EMBED: 4, OU
 const CellState = Object.freeze({ INVALID: 1, BLANK: 2, ORIGINAL: 3, SMOOTH: 4 });
 const CellConfig = Object.freeze({ NOORIGINAL: 1, NOSMOOTH: 2, BLANK: 3 });
 
-let smootherConfig = { cellConfigs: {}, paletteFile: null, useBuggySmoothing: false };
-
-// TMP: hardcoding smoother config
-let nonGnomeSmootherConfig = { cellConfigs: {}, paletteFile: null, useBuggySmoothing: false };
-let gnomeSmootherConfig = { cellConfigs: {}, paletteFile: null, useBuggySmoothing: true };
-// Shoulders
-gnomeSmootherConfig.cellConfigs[JSON.stringify([ 2, 4, 4 ])] = CellConfig.NOORIGINAL;
-gnomeSmootherConfig.cellConfigs[JSON.stringify([ 6, 4, 4 ])] = CellConfig.NOORIGINAL;
-// Front-right side
-gnomeSmootherConfig.cellConfigs[JSON.stringify([ 3, 3, 4 ])] = CellConfig.NOORIGINAL;
-gnomeSmootherConfig.cellConfigs[JSON.stringify([ 3, 3, 3 ])] = CellConfig.NOORIGINAL;
-gnomeSmootherConfig.cellConfigs[JSON.stringify([ 3, 3, 2 ])] = CellConfig.NOORIGINAL;
-// Front-left side
-gnomeSmootherConfig.cellConfigs[JSON.stringify([ 5, 3, 4 ])] = CellConfig.NOORIGINAL;
-gnomeSmootherConfig.cellConfigs[JSON.stringify([ 5, 3, 3 ])] = CellConfig.NOORIGINAL;
-gnomeSmootherConfig.cellConfigs[JSON.stringify([ 5, 3, 2 ])] = CellConfig.NOORIGINAL;
-// Back-right side
-gnomeSmootherConfig.cellConfigs[JSON.stringify([ 3, 5, 4 ])] = CellConfig.NOORIGINAL;
-gnomeSmootherConfig.cellConfigs[JSON.stringify([ 3, 5, 3 ])] = CellConfig.NOORIGINAL;
-gnomeSmootherConfig.cellConfigs[JSON.stringify([ 3, 5, 2 ])] = CellConfig.NOORIGINAL;
-// Back-left side
-gnomeSmootherConfig.cellConfigs[JSON.stringify([ 5, 5, 4 ])] = CellConfig.NOORIGINAL;
-gnomeSmootherConfig.cellConfigs[JSON.stringify([ 5, 5, 3 ])] = CellConfig.NOORIGINAL;
-gnomeSmootherConfig.cellConfigs[JSON.stringify([ 5, 5, 2 ])] = CellConfig.NOORIGINAL;
-// Nose
-gnomeSmootherConfig.cellConfigs[JSON.stringify([ 5, 2, 6 ])] = CellConfig.NOSMOOTH;
-gnomeSmootherConfig.cellConfigs[JSON.stringify([ 5, 2, 7 ])] = CellConfig.NOSMOOTH;
-gnomeSmootherConfig.cellConfigs[JSON.stringify([ 3, 2, 6 ])] = CellConfig.NOSMOOTH;
-gnomeSmootherConfig.cellConfigs[JSON.stringify([ 3, 2, 7 ])] = CellConfig.NOSMOOTH;
-
+let smootherConfig = { useBuggySmoothing: false, paletteFile: null, cellConfigs: {} };
 
 // Palette index equality: Wraps basic equality, allowing for chunks of indices considered "equal"
 function palEq(v1, v2)
@@ -57,7 +28,7 @@ function palEq(v1, v2)
 	}
 }
 
-function getCellState(data, x, y, z)
+function getCellState(model, x, y, z)
 {
 	// Handle passing object with x,y,z
 	if (isNaN(x))
@@ -68,12 +39,10 @@ function getCellState(data, x, y, z)
 	}
 
 	// No voxel model available
-	if (!data || !data.models || data.models.length < 1)
+	if (!model)
 	{
 		return CellState.INVALID;
 	}
-
-	let model = data.models[0];
 
 	if (x < 0 || y < 0 || z < 0)
 	{
@@ -99,9 +68,6 @@ function getCellState(data, x, y, z)
 
 function smoother_processVoxData(data)
 {
-	// TMP: hardcoding smoother config
-	smootherConfig = document.getElementById("fileSelect").files[0].name == "gnome_relaxed_01.vox" ? gnomeSmootherConfig : nonGnomeSmootherConfig;
-
 	for (let i = 0; i < data.models.length; i++)
 	{
 		const model = data.models[i];
@@ -127,13 +93,50 @@ function smoother_processVoxData(data)
 			}
 		}
 
-		// grid populate && disabled voxels
+		// grid populate voxels
+		for (let k = 0; k < model.voxels.length; k++)
+		{
+			const v = model.voxels[k];
+			v.enabled = true;
+			model.grid[ v.x ][ v.y ][ v.z ] = v.color;
+		}
+
+		// Add smoothVoxels collection (placeholder)
+		model.smoothVoxels = [];
+	}
+	for (let i = 0; i < data.palette.length; i++)
+	{
+		data.palette[i].r /= 255;
+		data.palette[i].g /= 255;
+		data.palette[i].b /= 255;
+		data.palette[i].a /= 255;
+	}
+
+	processConfigData(data);
+}
+
+function processConfigData(data)
+{
+	for (let i = 0; i < data.models.length; i++)
+	{
+		const model = data.models[i];
+
+		// Clear old smoothing
+		for (let k = 0; k < model.smoothVoxels.length; k++)
+		{
+			const v = model.smoothVoxels[k];
+			model.grid[ v.x ][ v.y ][ v.z ] = -1;
+		}
+		model.smoothVoxels = [];
+
+		// Config-based original voxel removal
 		for (let k = 0; k < model.voxels.length; k++)
 		{
 			const v = model.voxels[k];
 			if (smootherConfig.cellConfigs[JSON.stringify([v.x, v.y, v.z])] == CellConfig.NOORIGINAL)
 			{
 				v.enabled = false;
+				model.grid[ v.x ][ v.y ][ v.z ] = -1;
 			}
 			else
 			{
@@ -142,8 +145,31 @@ function smoother_processVoxData(data)
 			}
 		}
 
-		// smooth voxel calculation
-		model.smoothVoxels = [];
+		// "culled" flag create
+		for (let k = 0; k < model.voxels.length; k++)
+		{
+			const v = model.voxels[k];
+			// Unculled if uncovered by 'original' voxel on ANY side
+			let culled = true;
+			     if (getCellState(model, v.x-1, v.y, v.z) != CellState.ORIGINAL) { culled = false; }
+			else if (getCellState(model, v.x, v.y-1, v.z) != CellState.ORIGINAL) { culled = false; }
+			else if (getCellState(model, v.x, v.y, v.z-1) != CellState.ORIGINAL) { culled = false; }
+			else if (getCellState(model, v.x+1, v.y, v.z) != CellState.ORIGINAL) { culled = false; }
+			else if (getCellState(model, v.x, v.y+1, v.z) != CellState.ORIGINAL) { culled = false; }
+			else if (getCellState(model, v.x, v.y, v.z+1) != CellState.ORIGINAL) { culled = false; }
+			v.culled = culled;
+		}
+	}
+	processSmoothing(data);
+}
+
+function processSmoothing(data)
+{
+	for (let i = 0; i < voxData.models.length; i++)
+	{
+		const model = voxData.models[i];
+
+		// Calculate new smoothing
 		for (let x = 0; x < model.size.x; x++)
 		{
 			for (let y = 0; y < model.size.y; y++)
@@ -151,7 +177,7 @@ function smoother_processVoxData(data)
 				for (let z = 0; z < model.size.z; z++)
 				{
 					// Only smooth empty grid spaces
-					if (getCellState(data, x, y, z) != CellState.BLANK)
+					if (getCellState(model, x, y, z) != CellState.BLANK)
 					{
 						continue;
 					}
@@ -159,24 +185,24 @@ function smoother_processVoxData(data)
 					// Get adjacent cell states
 					let a = [ -1, -1, -1, -1, -1, -1,   -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 ];
 					let hasAdjacent = false;
-					if (getCellState(data, x-1, y, z) == CellState.ORIGINAL) { a[0] = model.grid[x-1][y][z]; hasAdjacent = true; }
-					if (getCellState(data, x, y-1, z) == CellState.ORIGINAL) { a[1] = model.grid[x][y-1][z]; hasAdjacent = true; }
-					if (getCellState(data, x, y, z-1) == CellState.ORIGINAL) { a[2] = model.grid[x][y][z-1]; hasAdjacent = true; }
-					if (getCellState(data, x+1, y, z) == CellState.ORIGINAL) { a[3] = model.grid[x+1][y][z]; hasAdjacent = true; }
-					if (getCellState(data, x, y+1, z) == CellState.ORIGINAL) { a[4] = model.grid[x][y+1][z]; hasAdjacent = true; }
-					if (getCellState(data, x, y, z+1) == CellState.ORIGINAL) { a[5] = model.grid[x][y][z+1]; hasAdjacent = true; }
-					if (getCellState(data, x-1, y-1, z) == CellState.ORIGINAL) { a[ 6] = model.grid[x-1][y-1][z]; hasAdjacent = true; }
-					if (getCellState(data, x-1, y, z-1) == CellState.ORIGINAL) { a[ 7] = model.grid[x-1][y][z-1]; hasAdjacent = true; }
-					if (getCellState(data, x-1, y+1, z) == CellState.ORIGINAL) { a[ 8] = model.grid[x-1][y+1][z]; hasAdjacent = true; }
-					if (getCellState(data, x-1, y, z+1) == CellState.ORIGINAL) { a[ 9] = model.grid[x-1][y][z+1]; hasAdjacent = true; }
-					if (getCellState(data, x+1, y-1, z) == CellState.ORIGINAL) { a[10] = model.grid[x+1][y-1][z]; hasAdjacent = true; }
-					if (getCellState(data, x+1, y, z-1) == CellState.ORIGINAL) { a[11] = model.grid[x+1][y][z-1]; hasAdjacent = true; }
-					if (getCellState(data, x+1, y+1, z) == CellState.ORIGINAL) { a[12] = model.grid[x+1][y+1][z]; hasAdjacent = true; }
-					if (getCellState(data, x+1, y, z+1) == CellState.ORIGINAL) { a[13] = model.grid[x+1][y][z+1]; hasAdjacent = true; }
-					if (getCellState(data, x, y-1, z-1) == CellState.ORIGINAL) { a[14] = model.grid[x][y-1][z-1]; hasAdjacent = true; }
-					if (getCellState(data, x, y-1, z+1) == CellState.ORIGINAL) { a[15] = model.grid[x][y-1][z+1]; hasAdjacent = true; }
-					if (getCellState(data, x, y+1, z-1) == CellState.ORIGINAL) { a[16] = model.grid[x][y+1][z-1]; hasAdjacent = true; }
-					if (getCellState(data, x, y+1, z+1) == CellState.ORIGINAL) { a[17] = model.grid[x][y+1][z+1]; hasAdjacent = true; }
+					if (getCellState(model, x-1, y, z) == CellState.ORIGINAL) { a[0] = model.grid[x-1][y][z]; hasAdjacent = true; }
+					if (getCellState(model, x, y-1, z) == CellState.ORIGINAL) { a[1] = model.grid[x][y-1][z]; hasAdjacent = true; }
+					if (getCellState(model, x, y, z-1) == CellState.ORIGINAL) { a[2] = model.grid[x][y][z-1]; hasAdjacent = true; }
+					if (getCellState(model, x+1, y, z) == CellState.ORIGINAL) { a[3] = model.grid[x+1][y][z]; hasAdjacent = true; }
+					if (getCellState(model, x, y+1, z) == CellState.ORIGINAL) { a[4] = model.grid[x][y+1][z]; hasAdjacent = true; }
+					if (getCellState(model, x, y, z+1) == CellState.ORIGINAL) { a[5] = model.grid[x][y][z+1]; hasAdjacent = true; }
+					if (getCellState(model, x-1, y-1, z) == CellState.ORIGINAL) { a[ 6] = model.grid[x-1][y-1][z]; hasAdjacent = true; }
+					if (getCellState(model, x-1, y, z-1) == CellState.ORIGINAL) { a[ 7] = model.grid[x-1][y][z-1]; hasAdjacent = true; }
+					if (getCellState(model, x-1, y+1, z) == CellState.ORIGINAL) { a[ 8] = model.grid[x-1][y+1][z]; hasAdjacent = true; }
+					if (getCellState(model, x-1, y, z+1) == CellState.ORIGINAL) { a[ 9] = model.grid[x-1][y][z+1]; hasAdjacent = true; }
+					if (getCellState(model, x+1, y-1, z) == CellState.ORIGINAL) { a[10] = model.grid[x+1][y-1][z]; hasAdjacent = true; }
+					if (getCellState(model, x+1, y, z-1) == CellState.ORIGINAL) { a[11] = model.grid[x+1][y][z-1]; hasAdjacent = true; }
+					if (getCellState(model, x+1, y+1, z) == CellState.ORIGINAL) { a[12] = model.grid[x+1][y+1][z]; hasAdjacent = true; }
+					if (getCellState(model, x+1, y, z+1) == CellState.ORIGINAL) { a[13] = model.grid[x+1][y][z+1]; hasAdjacent = true; }
+					if (getCellState(model, x, y-1, z-1) == CellState.ORIGINAL) { a[14] = model.grid[x][y-1][z-1]; hasAdjacent = true; }
+					if (getCellState(model, x, y-1, z+1) == CellState.ORIGINAL) { a[15] = model.grid[x][y-1][z+1]; hasAdjacent = true; }
+					if (getCellState(model, x, y+1, z-1) == CellState.ORIGINAL) { a[16] = model.grid[x][y+1][z-1]; hasAdjacent = true; }
+					if (getCellState(model, x, y+1, z+1) == CellState.ORIGINAL) { a[17] = model.grid[x][y+1][z+1]; hasAdjacent = true; }
 
 					// Only check cells with adjacencies
 					if (!hasAdjacent)
@@ -229,38 +255,16 @@ function smoother_processVoxData(data)
 						if (pattern != "")
 						{
 							let newSmooth = { x: x, y: y, z: z, color: color, enabled: true, culled: false, pattern: pattern, orientation: orient };
+							model.smoothVoxels.push(newSmooth);
+							model.grid[x][y][z] = newSmooth;
 							if (smootherConfig.cellConfigs[JSON.stringify([x, y, z])] == CellConfig.NOSMOOTH)
 							{
 								newSmooth.enabled = false;
 							}
-							model.smoothVoxels.push(newSmooth);
-							model.grid[x][y][z] = newSmooth;
 						}
 					}
 				}
 			}
 		}
-
-		// "culled" flag create
-		for (let k = 0; k < model.voxels.length; k++)
-		{
-			const v = model.voxels[k];
-			// Unculled if uncovered by 'original' voxel on ANY side
-			let culled = true;
-				 if (getCellState(data, v.x-1, v.y, v.z) != CellState.ORIGINAL) { culled = false; }
-			else if (getCellState(data, v.x, v.y-1, v.z) != CellState.ORIGINAL) { culled = false; }
-			else if (getCellState(data, v.x, v.y, v.z-1) != CellState.ORIGINAL) { culled = false; }
-			else if (getCellState(data, v.x+1, v.y, v.z) != CellState.ORIGINAL) { culled = false; }
-			else if (getCellState(data, v.x, v.y+1, v.z) != CellState.ORIGINAL) { culled = false; }
-			else if (getCellState(data, v.x, v.y, v.z+1) != CellState.ORIGINAL) { culled = false; }
-			v.culled = culled;
-		}
-	}
-	for (let i = 0; i < data.palette.length; i++)
-	{
-		data.palette[i].r /= 255;
-		data.palette[i].g /= 255;
-		data.palette[i].b /= 255;
-		data.palette[i].a /= 255;
 	}
 }

@@ -10,6 +10,7 @@
 		<script src='libs/cam_orbit.js'></script>
 		<script src='libs/meshes.js'></script>
 		<script src='libs/smootherRenderLogic.js'></script>
+		<script src='libs/exportObj.js'></script>
 		<style>
 			.fatalErr
 			{
@@ -33,11 +34,31 @@
 			{
 				flex: 1 1 auto;
 			}
+			#hiddenVoxFileSelector, #hiddenMvsFileSelector, #manualExport
+			{
+				display: none;
+			}
+			#voxfileName, #mvsFileName, #objFileName
+			{
+				padding: 0em 1em;
+				border: 1px solid black;
+				margin-right: .25em;
+			}
+			#showSmooth
+			{
+				margin-left: 1em;
+			}
 		</style>
 	</head>
 	<body onload='main()'>
 		<div id='head'>
-			<input type='file' id='fileSelect' accept='.vox'/>
+			<button id='fileSelector'>Open VOX model</button>
+			<span id='voxFileName'></span>
+			<span id='mvsFileName'></span>
+			<span id='objFileName'></span>
+			<button id='manualExport'>Export OBJ model</button>
+			<input type='file' id='hiddenVoxFileSelector' accept='.vox'/>
+			<input type='file' id='hiddenMvsFileSelector' accept='.mvs'/>
 			<input type='checkbox' id='showSmooth' checked>Show smoothing</input>
 		</div>
 		<canvas id='view'></canvas>
@@ -46,8 +67,8 @@
 
 <script>
 	let voxData;
-	const meshes = {};
-	let shader;
+	let usingNativeFileIO = true;
+	let voxFile, mvsFile, objFile;
 
 	function main()
 	{
@@ -58,8 +79,18 @@
 		}
 
 		// file handling
-		fileUpdatedListeners.add(document.getElementById("fileSelect"), onFileUpdated);
-		document.getElementById("fileSelect").addEventListener("change", onFileSelect);
+		if (typeof window.chooseFileSystemEntries === "undefined")
+		{
+			usingNativeFileIO = false;
+			alert("This web app works best with chrome's 'Native File System API', through which it can auto-export the OBJ file as you work.\nYou can enable this experimental feature at 'chrome://flags/'.");
+			document.getElementById("objFileName").style.display = "none";
+		}
+
+		document.getElementById("fileSelector").addEventListener("click", onFileSelectorClicked);
+		fileUpdatedListeners.add(document.getElementById("hiddenVoxFileSelector"), onVoxFileUpdated);
+		document.getElementById("hiddenVoxFileSelector").addEventListener("change", onFileSelect);
+		fileUpdatedListeners.add(document.getElementById("hiddenMvsFileSelector"), onMvsFileUpdated);
+		document.getElementById("manualExport").addEventListener("click", onManualExport);
 
 		// Start frame looping
 		requestAnimationFrame(frameLogic);
@@ -76,19 +107,84 @@
 	function onFileSelect(evt)
 	{
 		resetCamOrbit();
+		setTimeout(function() { clickElement(document.getElementById("hiddenMvsFileSelector")); }, 250);
 	}
 
 	// Called each time source model file changes
 	// Loads and prepares voxel data
-	function onFileUpdated(file)
+	function onVoxFileUpdated(file)
 	{
 		console.log("Vox modified externally");
 		const reader = new FileReader();
 		reader.onload = function()
 		{
+			document.getElementById('voxFileName').innerHTML = file.name;
 			voxData = parseVox(reader.result);
 			smoother_processVoxData(voxData);
+			document.getElementById("manualExport").style.display = "unset";
 		};
 		reader.readAsArrayBuffer(file);
+	}
+
+	// Called each time VMSmooth config file changes
+	function onMvsFileUpdated(file)
+	{
+		console.log("Mvs modified externally");
+		const reader = new FileReader();
+		reader.onload = function()
+		{
+			document.getElementById('mvsFileName').innerHTML = file.name;
+			smootherConfig = JSON.parse(bin2Str(reader.result, 0, reader.result.byteLength));
+			processConfigData(voxData);
+		};
+		reader.readAsArrayBuffer(file);
+	}
+
+
+	function clickElement(element)
+	{
+		if(element && document.createEvent)
+		{
+			var evt = document.createEvent("MouseEvents");
+			evt.initEvent("click", true, false);
+			element.dispatchEvent(evt);
+		}
+	}
+	function onFileSelectorClicked()
+	{
+		if (usingNativeFileIO)
+		{
+		}
+		else
+		{
+			clickElement(document.getElementById("hiddenVoxFileSelector"));
+		}
+	}
+
+	function downloadNewFile(filename, content, isRawContent)
+	{
+		var e = document.createElement("a");
+		e.setAttribute("download", filename);
+		if (isRawContent)
+		{
+			e.setAttribute("href", content);
+		}
+		else
+		{
+			e.setAttribute("href", "data:text/plain;charset=utf-8," + encodeURIComponent(content));
+		}
+		e.style.display = 'none';
+		document.body.appendChild(e);
+		e.click();
+		document.body.removeChild(e);
+	}
+
+	function onManualExport()
+	{
+		let modelName = document.getElementById("hiddenVoxFileSelector").files[0].name.replace(".vox", "");
+		let objModel = exportObj(modelName, voxData);
+		downloadNewFile(modelName + ".obj", objModel.obj);
+		downloadNewFile(modelName + ".mtl", objModel.mtl);
+		downloadNewFile(modelName + ".png", objModel.png, true);
 	}
 </script>
