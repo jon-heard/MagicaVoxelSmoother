@@ -30,9 +30,21 @@
 				flex: 0 1 auto;
 				margin-bottom: 0.5em;
 			}
-			#view
+			#foot
+			{
+				flex: 0 1 auto;
+				margin-top: 0.5em;
+				border: 2px inset lightgray;
+				padding: 0em .5em;
+			}
+			#viewSpace
 			{
 				flex: 1 1 auto;
+				min-width: 0;
+			}
+			#view
+			{
+				position: absolute;
 			}
 			#hiddenVoxFileSelector, #hiddenMvsFileSelector, #manualExport
 			{
@@ -62,7 +74,11 @@
 			<input type='file' id='hiddenMvsFileSelector' accept='.mvs'/>
 			<input type='checkbox' id='showSmooth' checked>Show smoothing</input>
 		</div>
+		<div id='viewSpace'></div>
 		<canvas id='view'></canvas>
+		<div id='foot'>
+			<span id='footContent'>Footer content</span>
+		</div>
 	</body>
 </html>
 

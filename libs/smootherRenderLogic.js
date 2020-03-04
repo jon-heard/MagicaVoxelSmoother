@@ -1,6 +1,5 @@
 
 	let gl;
-	let canvasHeightOffset;
 	let showSmoothUi;
 	let shader;
 	const meshes = {};
@@ -8,8 +7,15 @@
 	// Each browser resize requires viewport recalculation
 	function onResize(evt)
 	{
-		gl.canvas.width = gl.canvas.clientWidth;
-		gl.canvas.height = window.innerHeight - canvasHeightOffset - 1;
+		// HACK: The view is absolutely positioned to cover the 'viewspace' div.
+		//   This is because flex is incompatible with setting canvas width & height elements to flex-defined sizes.
+		//   (they don't work well together), so 'viewSpace' div gets flex-defined sizes and view is positioned to match
+		let viewSpace = document.getElementById("viewSpace");
+		gl.canvas.style.left = viewSpace.offsetLeft;
+		gl.canvas.style.top = viewSpace.offsetTop;
+		gl.canvas.width = viewSpace.clientWidth;
+		gl.canvas.height = viewSpace.clientHeight;
+
 		gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 		mat4.perspective(gl.projectionMatrix, 45 * Math.PI/180, gl.canvas.width / gl.canvas.height, 0.1, 1000.0);
 	}
@@ -87,7 +93,6 @@
 		initCamOrbit();
 
 		// Setup sizing management
-		canvasHeightOffset = window.innerHeight - gl.canvas.clientHeight;
 		window.addEventListener("resize", onResize, false);
 		onResize();
 
