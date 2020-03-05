@@ -100,6 +100,36 @@ function createMesh_cube(size)
 	return result;
 }
 
+function createMesh_cubeOutline(size)
+{
+	size = (size ? size : 1) * 0.5;
+	const result = {};
+	result.vertices = [
+		// Front face
+		+size, +size, -size,
+		+size, +size, +size,
+		-size, +size, +size,
+		-size, +size, -size,
+		+size, -size, -size,
+		+size, -size, +size,
+		-size, -size, +size,
+		-size, -size, -size,
+	];
+	result.normals = [
+		// Front
+		 1.0,  0.0,  0.0,
+		 1.0,  0.0,  0.0,
+		 1.0,  0.0,  0.0,
+		 1.0,  0.0,  0.0,
+		 1.0,  0.0,  0.0,
+		 1.0,  0.0,  0.0,
+		 1.0,  0.0,  0.0,
+		 1.0,  0.0,  0.0,
+	];
+	result.faces = [0, 1, 2, 3, 7, 6, 5, 4, 0, 3, 7, 4, 5, 1, 2, 6];
+	return result;
+}
+
 function createMesh_corner(gl, size)
 {
 	size = (size ? size : 1) * 0.5;

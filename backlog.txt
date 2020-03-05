@@ -1,5 +1,6 @@
+- add highlighting for removed voxels or smoothing (or none)
+
 - get voxel hovering working (print to console)
-- shader to highlight a hovered voxel
 - allow disabling smoothing voxel (click-to-toggle)
 - allow removing original voxel (click to toggle)
 - auto-save mvSmooth file

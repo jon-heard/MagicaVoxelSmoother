@@ -56,7 +56,7 @@
 				border: 1px solid black;
 				margin-right: .25em;
 			}
-			#showSmooth
+			#showSmooth, #configUi
 			{
 				margin-left: 1em;
 			}
@@ -73,6 +73,11 @@
 			<input type='file' id='hiddenVoxFileSelector' accept='.vox'/>
 			<input type='file' id='hiddenMvsFileSelector' accept='.mvs'/>
 			<input type='checkbox' id='showSmooth' checked>Show smoothing</input>
+			<span id='configUi'>Configure <select id='configSelect'>
+				<option value='0'>None</option>
+				<option value='1'>Toggle voxel cells</option>
+				<option value='2'>Toggle smoothing cells</option>
+			</select></span>
 		</div>
 		<div id='viewSpace'></div>
 		<canvas id='view'></canvas>
@@ -141,6 +146,7 @@
 		reader.onload = function()
 		{
 			document.getElementById('voxFilename').innerHTML = file.name;
+			onResize();
 			voxData = parseVox(reader.result);
 			smoother_processVoxData(voxData);
 			if (usingNativeFileIO)
@@ -163,6 +169,7 @@
 		reader.onload = function()
 		{
 			document.getElementById('mvsFilename').innerHTML = file.name;
+			onResize();
 			smootherConfig = JSON.parse(bin2Str(reader.result, 0, reader.result.byteLength));
 			processConfigData(voxData);
 			if (usingNativeFileIO)

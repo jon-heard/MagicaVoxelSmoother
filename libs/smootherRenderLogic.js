@@ -1,11 +1,12 @@
 
 	let gl;
 	let showSmoothUi;
-	let shader;
+	let shaderMain, shaderHighlight;
 	const meshes = {};
+	let configMod = 0;
 
 	// Each browser resize requires viewport recalculation
-	function onResize(evt)
+	function onResize()
 	{
 		// HACK: The view is absolutely positioned to cover the 'viewspace' div.
 		//   This is because flex is incompatible with setting canvas width & height elements to flex-defined sizes.
@@ -76,7 +77,20 @@
 				gl_FragColor = varyingColor;
 			}
 		`;
-		shader = createShader(gl, shaderSrc_v, shaderSrc_f, ["vertex", "normal"], ["matModelView", "matProjection", "matNormal", "color"]);
+		const shaderSrcHighlight_v = `
+			attribute vec4 vertex;
+			uniform mat4 matProjection;
+			uniform mat4 matModelView;
+			uniform vec4 color;
+			varying lowp vec4 varyingColor;
+			void main()
+			{
+				gl_Position = matProjection * matModelView * vertex;
+				varyingColor = vec4(color.r, color.g, color.b, 1.0);
+			}
+		`;
+		shaderMain = createShader(gl, shaderSrc_v, shaderSrc_f, ["vertex", "normal"], ["matModelView", "matProjection", "matNormal", "color"]);
+		shaderHighlight = createShader(gl, shaderSrcHighlight_v, shaderSrc_f, ["vertex"], ["matModelView", "matProjection", "color"]);
 		if (typeof(shader) === "string")
 		{
 			return onFatalError(shader);
@@ -84,6 +98,7 @@
 
 		// Meshes
 		meshes[SmoothType.ORIGINAL] = meshToGl(gl, createMesh_cube());
+		meshes[SmoothType.OUTLINE] = meshToGl(gl, createMesh_cubeOutline());
 		meshes[SmoothType.CORNER] = meshToGl(gl, createMesh_corner());
 		meshes[SmoothType.EMBED] = meshToGl(gl, createMesh_embed());
 		meshes[SmoothType.OUTBED] = meshToGl(gl, createMesh_outbed());
@@ -98,6 +113,12 @@
 
 		// ui lookup convenience
 		showSmoothUi = document.getElementById("showSmooth");
+
+		// Configuration modification setup
+		document.getElementById("configSelect").addEventListener("change", function(evt)
+		{
+			configMod = evt.target.value;
+		});
 
 		return true;
 	}
@@ -129,7 +150,7 @@
 				const modelViewMatrix = mat4.create();
 				mat4.translate(modelViewMatrix, modelViewMatrix, [v.x-s.x, v.y-s.y, v.z-s.z]);
 				mat4.multiply(modelViewMatrix, viewMatrix, modelViewMatrix);
-				renderMesh(gl, meshes[SmoothType.ORIGINAL], shader, [c.r,c.g,c.b,c.a], modelViewMatrix);
+				renderMesh(gl, meshes[SmoothType.ORIGINAL], shaderMain, [c.r,c.g,c.b,c.a], modelViewMatrix);
 			}
 
 			// Render smoothing voxels
@@ -149,11 +170,28 @@
 						gl.frontFace(gl.CW);
 					}
 					mat4.multiply(modelViewMatrix, viewMatrix, modelViewMatrix);
-					renderMesh(gl, meshes[v.pattern], shader, [c.r,c.g,c.b,c.a], modelViewMatrix);
+					renderMesh(gl, meshes[v.pattern], shaderMain, [c.r,c.g,c.b,c.a], modelViewMatrix);
 					if (v.orientation > 11)
 					{
 						gl.frontFace
 						(gl.CCW);
+					}
+				}
+			}
+
+			// Render config modifications
+			gl.clear(gl.DEPTH_BUFFER_BIT); // draw hightlights over geometry
+			if (configMod != 0)
+			{
+				for (let key in smootherConfig.cellConfigs)
+				{
+					if (smootherConfig.cellConfigs[key] == configMod)
+					{
+						let c = JSON.parse(key);
+						const modelViewMatrix = mat4.create();
+						mat4.translate(modelViewMatrix, modelViewMatrix, [c[0]-s.x, c[1]-s.y, c[2]-s.z]);
+						mat4.multiply(modelViewMatrix, viewMatrix, modelViewMatrix);
+						renderMesh(gl, meshes[SmoothType.OUTLINE], shaderHighlight, [1,1,1,1], modelViewMatrix, true);
 					}
 				}
 			}

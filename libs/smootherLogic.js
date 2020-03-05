@@ -1,5 +1,5 @@
 
-const SmoothType = Object.freeze({ NONE: 1, ORIGINAL: 2, CORNER: 3, EMBED: 4, OUTBED: 5, SIDECORNER: 6 });
+const SmoothType = Object.freeze({ NONE: 1, ORIGINAL: 2, OUTLINE: 3, CORNER: 4, EMBED: 5, OUTBED: 6, SIDECORNER: 7 });
 const CellState = Object.freeze({ INVALID: 1, BLANK: 2, ORIGINAL: 3, SMOOTH: 4 });
 const CellConfig = Object.freeze({ NOORIGINAL: 1, NOSMOOTH: 2, BLANK: 3 });
 

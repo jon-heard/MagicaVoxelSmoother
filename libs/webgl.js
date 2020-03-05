@@ -69,26 +69,37 @@ function createShader(gl, vSrc, fSrc, attributes, uniforms)
 	return result;
 }
 
-function renderMesh(gl, mesh, shader, color, modelViewMatrix)
+function renderMesh(gl, mesh, shader, color, modelViewMatrix, drawAsOutline)
 {
-	const normalMatrix = mat4.create();
-	mat4.invert(normalMatrix, modelViewMatrix);
-	mat4.transpose(normalMatrix, normalMatrix);
+	const hasNormals = shader.uniforms.hasOwnProperty("matNormal");
+	let normalMatrix;
+	if (hasNormals)
+	{
+		normalMatrix = mat4.create();
+		mat4.invert(normalMatrix, modelViewMatrix);
+		mat4.transpose(normalMatrix, normalMatrix);
+	}
 
 	gl.useProgram(shader.index);
 	gl.uniformMatrix4fv(shader.uniforms.matProjection, false, gl.projectionMatrix);
 	gl.uniformMatrix4fv(shader.uniforms.matModelView, false, modelViewMatrix);
-	gl.uniformMatrix4fv(shader.uniforms.matNormal, false, normalMatrix);
+	if (hasNormals)
+	{
+		gl.uniformMatrix4fv(shader.uniforms.matNormal, false, normalMatrix);
+	}
 	gl.uniform4fv(shader.uniforms.color, color);
 
 	gl.bindBuffer(gl.ARRAY_BUFFER, mesh.vertices);
 	gl.vertexAttribPointer(shader.attributes.vertex, 3, gl.FLOAT, false, 0, 0);
 	gl.enableVertexAttribArray(shader.attributes.vertex);
 
-	gl.bindBuffer(gl.ARRAY_BUFFER, mesh.normals);
-	gl.vertexAttribPointer(shader.attributes.normal, 3, gl.FLOAT, false, 0, 0);
-	gl.enableVertexAttribArray(shader.attributes.normal);
+	if (hasNormals)
+	{
+		gl.bindBuffer(gl.ARRAY_BUFFER, mesh.normals);
+		gl.vertexAttribPointer(shader.attributes.normal, 3, gl.FLOAT, false, 0, 0);
+		gl.enableVertexAttribArray(shader.attributes.normal);
+	}
 
 	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, mesh.faces);
-	gl.drawElements(gl.TRIANGLES, mesh.elementCount, gl.UNSIGNED_SHORT, 0);
+	gl.drawElements(drawAsOutline ? gl.LINE_STRIP : gl.TRIANGLES, mesh.elementCount, gl.UNSIGNED_SHORT, 0);
 }
