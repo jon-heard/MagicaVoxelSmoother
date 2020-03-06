@@ -1,17 +1,21 @@
-- add highlighting for removed voxels or smoothing (or none)
 
-- get voxel hovering working (print to console)
 - allow disabling smoothing voxel (click-to-toggle)
 - allow removing original voxel (click to toggle)
+
 - auto-save mvSmooth file
+
+- Organize code better (follow modern standards)
 
 - have pattern be defined once and then rotate-checked
 - fix up and add to patterns
 
 - get simpler native file interface for user (you should only need to specify vox file and others are auto-handled based on vox)
 
+- polish ui (menus)
+
+- debug with multi-model
+
 - optimize exported OBJ file
 	- don't export faces that are covered (backsides of voxels)
 
-- polish ui (menus)
 - export normals

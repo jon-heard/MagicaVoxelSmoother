@@ -77,11 +77,7 @@ function parseChunk_pack(data, offset)
 
 function parseChunk_size(data, offset)
 {
-	return {
-		x: bin2Uint(data, offset),
-		y: bin2Uint(data, offset+4),
-		z: bin2Uint(data, offset+8),
-	};
+	return vec3.fromValues(bin2Uint(data, offset), bin2Uint(data, offset+4), bin2Uint(data, offset+8));
 }
 
 function parseChunk_xyzi(data, offset)
@@ -92,7 +88,10 @@ function parseChunk_xyzi(data, offset)
 	const byteData = new Uint8Array(data);
 	for (var i = 0; i < count; i++)
 	{
-		result.push({ x: byteData[offset], y: byteData[offset+1], z: byteData[offset+2], color: byteData[offset+3] });
+		let newVoxel = vec3.fromValues(byteData[offset], byteData[offset+1], byteData[offset+2]);
+		newVoxel.type = "voxel";
+		newVoxel.color = byteData[offset+3];
+		result.push(newVoxel);
 		offset += 4;
 	}
 	return result;
@@ -104,7 +103,7 @@ function parseChunk_rgba(data, offset)
 	const result = [];
 	for (var i = 0; i < 256; i++)
 	{
-		result.push({ r: byteData[offset], g: byteData[offset+1], b: byteData[offset+2], a: byteData[offset+3] });
+		result.push(vec4.fromValues(byteData[offset], byteData[offset+1], byteData[offset+2], byteData[offset+3]));
 		offset += 4;
 	}
 	return result;

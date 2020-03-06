@@ -11,8 +11,8 @@ function exportObj(mtlName, pngName, data)
 	{
 		const model = voxData.models[i];
 
-		// Original Voxels
-		let mesh = meshes[SmoothType.ORIGINAL].mesh;
+		// Voxels
+		let mesh = meshes[SmoothType.VOXEL].mesh;
 		for (let i = 0; i < model.voxels.length; i++)
 		{
 			let voxel = model.voxels[i];
@@ -37,7 +37,7 @@ function exportObj(mtlName, pngName, data)
 			let vStart = v.length+1;
 			for (let i = 0; i < mesh.vertices.length; i += 3)
 			{
-				v.push({ x: mesh.vertices[i+0]+voxel.x-model.centerOffset.x, y: mesh.vertices[i+1]+voxel.y-model.centerOffset.y, z: mesh.vertices[i+2]+voxel.z });
+				v.push({ x: mesh.vertices[i+0]+voxel[0]-model.centerOffset[0], y: mesh.vertices[i+1]+voxel[1]-model.centerOffset[1], z: mesh.vertices[i+2]+voxel[2] });
 				
 			}
 
@@ -48,10 +48,10 @@ function exportObj(mtlName, pngName, data)
 			}
 		}
 
-		// Smoothing voxels
-		for (let i = 0; i < model.smoothVoxels.length; i++)
+		// Smooths
+		for (let i = 0; i < model.smooths.length; i++)
 		{
-			let voxel = model.smoothVoxels[i];
+			let voxel = model.smooths[i];
 			if (!voxel.enabled)
 			{
 				continue;
@@ -77,7 +77,7 @@ function exportObj(mtlName, pngName, data)
 			{
 				let vertex = vec3.fromValues(mesh.vertices[i], mesh.vertices[i+1], mesh.vertices[i+2]);
 				vec3.transformMat4(vertex, vertex, orientation);
-				v.push({ x: vertex[0]+voxel.x-model.centerOffset.x, y: vertex[1]+voxel.y-model.centerOffset.y, z: vertex[2]+voxel.z });
+				v.push({ x: vertex[0]+voxel[0]-model.centerOffset[0], y: vertex[1]+voxel[1]-model.centerOffset[1], z: vertex[2]+voxel[2] });
 			}
 
 			// faces
@@ -93,7 +93,7 @@ function exportObj(mtlName, pngName, data)
 	result.obj = "mtllib " + mtlName + "\nusemtl palette\n";
 	for (let i = 0; i < v.length; i++)
 	{
-		result.obj += "v " + (v[i].x*-1) + " " + v[i].z + " " + v[i].y + "\n";
+		result.obj += "v " + (v[i][0]*-1) + " " + v[i][2] + " " + v[i][1] + "\n";
 	}
 	for (let i = 0; i < vt_indexToColor.length; i++)
 	{
@@ -115,10 +115,10 @@ function exportObj(mtlName, pngName, data)
 	let imageData = context.createImageData(256, 1);
 	for (var i = 0; i < 256; i++)
 	{
-		imageData.data[i*4+0] = voxData.palette[i].r * 256;
-		imageData.data[i*4+1] = voxData.palette[i].g * 256;
-		imageData.data[i*4+2] = voxData.palette[i].b * 256;
-		imageData.data[i*4+3] = voxData.palette[i].a * 256;
+		imageData.data[i*4+0] = voxData.palette[i][0] * 256;
+		imageData.data[i*4+1] = voxData.palette[i][1] * 256;
+		imageData.data[i*4+2] = voxData.palette[i][2] * 256;
+		imageData.data[i*4+3] = 1.0;
 	}
 	context.putImageData(imageData, 0, 0);
 	result.png = canvas.toDataURL("image/png");

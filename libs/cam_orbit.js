@@ -4,9 +4,16 @@ const maxRotY = -0.1;
 const minZoom = 2;
 const maxZoom = 300;
 
-let viewRotX = 0;
-let viewRotY = -1.5;
-let viewZoom = 30;
+let viewRotX;
+let viewRotY;
+let viewZoom;
+
+function resetCamOrbit()
+{
+	viewRotX = 0;
+	viewRotY = -Math.PI/2;
+	viewZoom = 100;
+}
 
 function initCamOrbit(canvas)
 {
@@ -27,11 +34,15 @@ function getCamOrbitMatrix()
 	return result;
 }
 
-function resetCamOrbit()
+function getCamOrbitPosition()
 {
-	viewRotX = 0;
-	viewRotY = -1.5;
-	viewZoom = 30;
+	const viewMat = mat4.create();
+	mat4.rotate(viewMat, viewMat, -viewRotX, [0, 0, 1]);
+	mat4.rotate(viewMat, viewMat, -viewRotY, [1, 0, 0]);
+	mat4.translate(viewMat, viewMat, [0, 0, viewZoom]);
+	let result = vec3.create();
+	vec3.transformMat4(result, result, viewMat);
+	return result;
 }
 
 let mouseDown = null;

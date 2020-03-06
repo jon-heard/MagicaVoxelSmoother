@@ -1,5 +1,5 @@
 {
-	"useBuggySmoothing": true,
+	"useBuggySmooths": true,
 	"paletteFile": null,
 	"cellConfigs": {
 		"[2,4,4]": 1,

@@ -11,6 +11,7 @@
 		<script src='libs/meshes.js'></script>
 		<script src='libs/smootherRenderLogic.js'></script>
 		<script src='libs/exportObj.js'></script>
+		<script src='libs/configControl.js'></script>
 		<style>
 			.fatalErr
 			{
@@ -28,12 +29,12 @@
 			#head
 			{
 				flex: 0 1 auto;
-				margin-bottom: 0.5em;
+				margin-bottom: 0.25em;
 			}
 			#foot
 			{
 				flex: 0 1 auto;
-				margin-top: 0.5em;
+				margin-top: 0.25em;
 				border: 2px inset lightgray;
 				padding: 0em .5em;
 			}
@@ -73,8 +74,8 @@
 			<input type='file' id='hiddenVoxFileSelector' accept='.vox'/>
 			<input type='file' id='hiddenMvsFileSelector' accept='.mvs'/>
 			<input type='checkbox' id='showSmooth' checked>Show smoothing</input>
-			<span id='configUi'>Configure <select id='configSelect'>
-				<option value='0'>None</option>
+			<span id='configUi'>Configure <select id='configControlTool'>
+				<option value='0'>Nothing</option>
 				<option value='1'>Toggle voxel cells</option>
 				<option value='2'>Toggle smoothing cells</option>
 			</select></span>
@@ -82,7 +83,7 @@
 		<div id='viewSpace'></div>
 		<canvas id='view'></canvas>
 		<div id='foot'>
-			<span id='footContent'>Footer content</span>
+			<span id='footContent'>&nbsp;</span>
 		</div>
 	</body>
 </html>
@@ -118,6 +119,9 @@
 			document.getElementById("mvsFileSelector").style.display = "none";
 			document.getElementById("voxFileSelector").addEventListener("click", onVoxOpenClicked);
 		}
+
+		// Config control
+		initConfigControl();
 
 		// Start frame looping
 		requestAnimationFrame(frameLogic);
@@ -170,7 +174,7 @@
 		{
 			document.getElementById('mvsFilename').innerHTML = file.name;
 			onResize();
-			smootherConfig = JSON.parse(bin2Str(reader.result, 0, reader.result.byteLength));
+			setConfigState(JSON.parse(bin2Str(reader.result, 0, reader.result.byteLength)));
 			processConfigData(voxData);
 			if (usingNativeFileIO)
 			{
