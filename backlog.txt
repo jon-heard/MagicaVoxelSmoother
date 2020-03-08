@@ -1,7 +1,4 @@
 
-- allow disabling smoothing voxel (click-to-toggle)
-- allow removing original voxel (click to toggle)
-
 - auto-save mvSmooth file
 
 - Organize code better (follow modern standards)

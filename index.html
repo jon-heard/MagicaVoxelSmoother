@@ -76,8 +76,8 @@
 			<input type='checkbox' id='showSmooth' checked>Show smoothing</input>
 			<span id='configUi'>Configure <select id='configControlTool'>
 				<option value='0'>Nothing</option>
-				<option value='1'>Toggle voxel cells</option>
-				<option value='2'>Toggle smoothing cells</option>
+				<option value='2'>Toggle voxel cells</option>
+				<option value='4'>Toggle smoothing cells</option>
 			</select></span>
 		</div>
 		<div id='viewSpace'></div>
@@ -189,7 +189,7 @@
 	{
 		if(element && document.createEvent)
 		{
-			var evt = document.createEvent("MouseEvents");
+			let evt = document.createEvent("MouseEvents");
 			evt.initEvent("click", true, false);
 			element.dispatchEvent(evt);
 		}
@@ -246,7 +246,7 @@
 
 	function downloadNewFile(filename, content, isRawContent)
 	{
-		var e = document.createElement("a");
+		let e = document.createElement("a");
 		e.setAttribute("download", filename);
 		if (isRawContent)
 		{
@@ -273,10 +273,10 @@
 
 	function base64ToArrayBuffer(base64)
 	{
-		var binary_string =  window.atob(base64);
-		var len = binary_string.length;
-		var bytes = new Uint8Array( len );
-		for (var i = 0; i < len; i++)
+		let binary_string =  window.atob(base64);
+		let len = binary_string.length;
+		let bytes = new Uint8Array( len );
+		for (let i = 0; i < len; i++)
 		{
 			bytes[i] = binary_string.charCodeAt(i);
 		}

@@ -60,12 +60,12 @@ function createShader(gl, vSrc, fSrc, attributes, uniforms)
 
 	const result = { index: shaderProgram, attributes: {}, uniforms: {}};
 
-	for (var i = 0; i < attributes.length; i++)
+	for (let i = 0; i < attributes.length; i++)
 	{
 		result.attributes[attributes[i]] = gl.getAttribLocation(shaderProgram, attributes[i]);
 	}
 
-	for (var i = 0; i < uniforms.length; i++)
+	for (let i = 0; i < uniforms.length; i++)
 	{
 		result.uniforms[uniforms[i]] = gl.getUniformLocation(shaderProgram, uniforms[i]);
 	}

@@ -1,28 +1,28 @@
 
 const SmoothType = Object.freeze({ NONE: 1, VOXEL: 2, OUTLINE: 3, CORNER: 4, EMBED: 5, OUTBED: 6, SIDECORNER: 7 });
 const CellState = Object.freeze({ INVALID: 1, BLANK: 2, VOXEL: 3, SMOOTH: 4 });
-const CellConfig = Object.freeze({ NO_VOXEL: 1, NO_SMOOTH: 2, BLANK: 3 });
+const CellConfig = Object.freeze({ NO_VOXEL: 2, NO_SMOOTH: 4, BLANK: 6 });
 
 // Palette index equality: Wraps basic equality, allowing for chunks of indices considered "equal"
-function palEq(cell1, cell2)
+function palEq(voxel1, voxel2)
 {
-	if (!cell1 || !cell2)
+	if (!voxel1 || !voxel2)
 	{
 		return;
 	}
-	let c1 = cell1.color;
-	let c2 = cell2.color;
+	let color1 = voxel1.color;
+	let color2 = voxel2.color;
 	// Combine 228-239 into smooth clusters of 4: [228,229,230,231], [232,233,234,235], [236,237,238,239]
-	if (c1 > 227 && c1 < 240)
+	if (color1 > 227 && color1 < 240)
 	{
-		c1 = Math.floor(c1 / 4) * 4
+		color1 = Math.floor(color1 / 4) * 4
 	}
-	if (c2 > 227 && c2 < 240)
+	if (color2 > 227 && color2 < 240)
 	{
-		c2 = Math.floor(c2 / 4) * 4
+		color2 = Math.floor(color2 / 4) * 4
 	}
 
-	if (c1 == c2)
+	if (color1 == color2)
 	{
 		return true;
 	}
@@ -32,39 +32,38 @@ function palEq(cell1, cell2)
 	}
 }
 
-function getCellState(model, coords)
-{
-	// No voxel model available
-	if (!model)
-	{
-		return CellState.INVALID;
-	}
 
+function getCell(model, coords)
+{
 	if (coords[0] < 0 || coords[1] < 0 || coords[2] < 0)
 	{
-		return CellState.INVALID;
+		return null;
 	}
 	else if (coords[0] >= model.size[0] || coords[1] >= model.size[1] || coords[2] >= model.size[2])
 	{
+		return null;
+	}
+	return model.grid[coords[0]][coords[1]][coords[2]];
+}
+
+function getCellState(cell, includeDisabled)
+{
+	if (!cell)
+	{
 		return CellState.INVALID;
+	}
+	else if (cell.voxel && (cell.voxel.enabled || includeDisabled))
+	{
+		return CellState.VOXEL;
 	}
 	else
 	{
-		let c = model.grid[coords[0]][coords[1]][coords[2]];
-		if (c instanceof Float32Array)
+		for (let i = 0; i < cell.smooths.length; i++)
 		{
-			if (c.type == "voxel")
-			{
-				return CellState.VOXEL;
-			}
-			else if (c.type == "smooth")
+			if (cell.smooths[i].enabled || includeDisabled)
 			{
 				return CellState.SMOOTH;
 			}
-		}
-		else if (c instanceof Array)
-		{
-			return CellState.SMOOTH;
 		}
 	}
 	return CellState.BLANK;
@@ -91,7 +90,7 @@ function smoother_processVoxData(data)
 				model.grid[x].push([]);
 				for (let z = 0; z < model.size[2]; z++)
 				{
-					model.grid[x][y].push(null);
+					model.grid[x][y].push({ voxel: null, smooths: [] });
 				}
 			}
 		}
@@ -101,7 +100,7 @@ function smoother_processVoxData(data)
 		{
 			const v = model.voxels[k];
 			v.enabled = true;
-			model.grid[ v[0] ][ v[1] ][ v[2] ] = v.color;
+			model.grid[ v[0] ][ v[1] ][ v[2] ].voxel = v;
 		}
 
 		// Add smooths collection (placeholder)
@@ -121,28 +120,12 @@ function processConfigData(data)
 	{
 		const model = data.models[i];
 
-		// Clear old smooths
-		for (let k = 0; k < model.smooths.length; k++)
-		{
-			const v = model.smooths[k];
-			model.grid[ v[0] ][ v[1] ][ v[2] ] = null;
-		}
-		model.smooths = [];
-
-		// Config-based voxel removal
+		// Voxel disabling
 		for (let k = 0; k < model.voxels.length; k++)
 		{
 			const v = model.voxels[k];
-			if (configState.cellConfigs[JSON.stringify([v[0], v[1], v[2]])] == CellConfig.NO_VOXEL)
-			{
-				v.enabled = false;
-				model.grid[ v[0] ][ v[1] ][ v[2] ] = null;
-			}
-			else
-			{
-				v.enabled = true;
-				model.grid[ v[0] ][ v[1] ][ v[2] ] = v;
-			}
+			let cellConfigState = configState.cellConfigs[JSON.stringify([ v[0], v[1], v[2] ])];
+			v.enabled = (!cellConfigState || !(cellConfigState & CellConfig.NO_VOXEL));
 		}
 
 		// "culled" flag create
@@ -151,12 +134,12 @@ function processConfigData(data)
 			const v = model.voxels[k];
 			// Unculled if uncovered by voxel on ANY side
 			let culled = true;
-			     if (getCellState(model, [v[0]-1, v[1], v[2]]) != CellState.VOXEL) { culled = false; }
-			else if (getCellState(model, [v[0], v[1]-1, v[2]]) != CellState.VOXEL) { culled = false; }
-			else if (getCellState(model, [v[0], v[1], v[2]-1]) != CellState.VOXEL) { culled = false; }
-			else if (getCellState(model, [v[0]+1, v[1], v[2]]) != CellState.VOXEL) { culled = false; }
-			else if (getCellState(model, [v[0], v[1]+1, v[2]]) != CellState.VOXEL) { culled = false; }
-			else if (getCellState(model, [v[0], v[1], v[2]+1]) != CellState.VOXEL) { culled = false; }
+			     if (getCellState(getCell(model, [v[0]-1, v[1], v[2]])) != CellState.VOXEL) { culled = false; }
+			else if (getCellState(getCell(model, [v[0], v[1]-1, v[2]])) != CellState.VOXEL) { culled = false; }
+			else if (getCellState(getCell(model, [v[0], v[1], v[2]-1])) != CellState.VOXEL) { culled = false; }
+			else if (getCellState(getCell(model, [v[0]+1, v[1], v[2]])) != CellState.VOXEL) { culled = false; }
+			else if (getCellState(getCell(model, [v[0], v[1]+1, v[2]])) != CellState.VOXEL) { culled = false; }
+			else if (getCellState(getCell(model, [v[0], v[1], v[2]+1])) != CellState.VOXEL) { culled = false; }
 			v.culled = culled;
 		}
 	}
@@ -169,6 +152,13 @@ function processSmooths(data)
 	{
 		const model = voxData.models[i];
 
+		// Clear old smooths
+		for (let k = 0; k < model.smooths.length; k++)
+		{
+			getCell(model, model.smooths[k]).smooths = [];
+		}
+		model.smooths = [];
+
 		// Calculate new smooths
 		for (let x = 0; x < model.size[0]; x++)
 		{
@@ -177,32 +167,32 @@ function processSmooths(data)
 				for (let z = 0; z < model.size[2]; z++)
 				{
 					// Only smooth empty grid spaces
-					if (getCellState(model, [x, y, z]) != CellState.BLANK)
+					if (getCellState(getCell(model, [x, y, z])) != CellState.BLANK)
 					{
 						continue;
 					}
 
 					// Get adjacent cell states
-					let a = [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ];
+					let a = new Array(18).fill(null);
 					let hasAdjacent = false;
-					if (getCellState(model, [x-1, y, z]) == CellState.VOXEL) { a[0] = model.grid[x-1][y][z]; hasAdjacent = true; }
-					if (getCellState(model, [x, y-1, z]) == CellState.VOXEL) { a[1] = model.grid[x][y-1][z]; hasAdjacent = true; }
-					if (getCellState(model, [x, y, z-1]) == CellState.VOXEL) { a[2] = model.grid[x][y][z-1]; hasAdjacent = true; }
-					if (getCellState(model, [x+1, y, z]) == CellState.VOXEL) { a[3] = model.grid[x+1][y][z]; hasAdjacent = true; }
-					if (getCellState(model, [x, y+1, z]) == CellState.VOXEL) { a[4] = model.grid[x][y+1][z]; hasAdjacent = true; }
-					if (getCellState(model, [x, y, z+1]) == CellState.VOXEL) { a[5] = model.grid[x][y][z+1]; hasAdjacent = true; }
-					if (getCellState(model, [x-1, y-1, z]) == CellState.VOXEL) { a[ 6] = model.grid[x-1][y-1][z]; hasAdjacent = true; }
-					if (getCellState(model, [x-1, y, z-1]) == CellState.VOXEL) { a[ 7] = model.grid[x-1][y][z-1]; hasAdjacent = true; }
-					if (getCellState(model, [x-1, y+1, z]) == CellState.VOXEL) { a[ 8] = model.grid[x-1][y+1][z]; hasAdjacent = true; }
-					if (getCellState(model, [x-1, y, z+1]) == CellState.VOXEL) { a[ 9] = model.grid[x-1][y][z+1]; hasAdjacent = true; }
-					if (getCellState(model, [x+1, y-1, z]) == CellState.VOXEL) { a[10] = model.grid[x+1][y-1][z]; hasAdjacent = true; }
-					if (getCellState(model, [x+1, y, z-1]) == CellState.VOXEL) { a[11] = model.grid[x+1][y][z-1]; hasAdjacent = true; }
-					if (getCellState(model, [x+1, y+1, z]) == CellState.VOXEL) { a[12] = model.grid[x+1][y+1][z]; hasAdjacent = true; }
-					if (getCellState(model, [x+1, y, z+1]) == CellState.VOXEL) { a[13] = model.grid[x+1][y][z+1]; hasAdjacent = true; }
-					if (getCellState(model, [x, y-1, z-1]) == CellState.VOXEL) { a[14] = model.grid[x][y-1][z-1]; hasAdjacent = true; }
-					if (getCellState(model, [x, y-1, z+1]) == CellState.VOXEL) { a[15] = model.grid[x][y-1][z+1]; hasAdjacent = true; }
-					if (getCellState(model, [x, y+1, z-1]) == CellState.VOXEL) { a[16] = model.grid[x][y+1][z-1]; hasAdjacent = true; }
-					if (getCellState(model, [x, y+1, z+1]) == CellState.VOXEL) { a[17] = model.grid[x][y+1][z+1]; hasAdjacent = true; }
+					if (getCellState(getCell(model, [x-1, y, z])) == CellState.VOXEL) { a[0] = getCell(model, [x-1, y, z]).voxel; hasAdjacent = true; }
+					if (getCellState(getCell(model, [x, y-1, z])) == CellState.VOXEL) { a[1] = getCell(model, [x, y-1, z]).voxel; hasAdjacent = true; }
+					if (getCellState(getCell(model, [x, y, z-1])) == CellState.VOXEL) { a[2] = getCell(model, [x, y, z-1]).voxel; hasAdjacent = true; }
+					if (getCellState(getCell(model, [x+1, y, z])) == CellState.VOXEL) { a[3] = getCell(model, [x+1, y, z]).voxel; hasAdjacent = true; }
+					if (getCellState(getCell(model, [x, y+1, z])) == CellState.VOXEL) { a[4] = getCell(model, [x, y+1, z]).voxel; hasAdjacent = true; }
+					if (getCellState(getCell(model, [x, y, z+1])) == CellState.VOXEL) { a[5] = getCell(model, [x, y, z+1]).voxel; hasAdjacent = true; }
+					if (getCellState(getCell(model, [x-1, y-1, z])) == CellState.VOXEL) { a[ 6] = getCell(model, [x-1, y-1, z]).voxel; hasAdjacent = true; }
+					if (getCellState(getCell(model, [x-1, y, z-1])) == CellState.VOXEL) { a[ 7] = getCell(model, [x-1, y, z-1]).voxel; hasAdjacent = true; }
+					if (getCellState(getCell(model, [x-1, y+1, z])) == CellState.VOXEL) { a[ 8] = getCell(model, [x-1, y+1, z]).voxel; hasAdjacent = true; }
+					if (getCellState(getCell(model, [x-1, y, z+1])) == CellState.VOXEL) { a[ 9] = getCell(model, [x-1, y, z+1]).voxel; hasAdjacent = true; }
+					if (getCellState(getCell(model, [x+1, y-1, z])) == CellState.VOXEL) { a[10] = getCell(model, [x+1, y-1, z]).voxel; hasAdjacent = true; }
+					if (getCellState(getCell(model, [x+1, y, z-1])) == CellState.VOXEL) { a[11] = getCell(model, [x+1, y, z-1]).voxel; hasAdjacent = true; }
+					if (getCellState(getCell(model, [x+1, y+1, z])) == CellState.VOXEL) { a[12] = getCell(model, [x+1, y+1, z]).voxel; hasAdjacent = true; }
+					if (getCellState(getCell(model, [x+1, y, z+1])) == CellState.VOXEL) { a[13] = getCell(model, [x+1, y, z+1]).voxel; hasAdjacent = true; }
+					if (getCellState(getCell(model, [x, y-1, z-1])) == CellState.VOXEL) { a[14] = getCell(model, [x, y-1, z-1]).voxel; hasAdjacent = true; }
+					if (getCellState(getCell(model, [x, y-1, z+1])) == CellState.VOXEL) { a[15] = getCell(model, [x, y-1, z+1]).voxel; hasAdjacent = true; }
+					if (getCellState(getCell(model, [x, y+1, z-1])) == CellState.VOXEL) { a[16] = getCell(model, [x, y+1, z-1]).voxel; hasAdjacent = true; }
+					if (getCellState(getCell(model, [x, y+1, z+1])) == CellState.VOXEL) { a[17] = getCell(model, [x, y+1, z+1]).voxel; hasAdjacent = true; }
 
 					// Only check cells with adjacencies
 					if (!hasAdjacent)
@@ -213,7 +203,7 @@ function processSmooths(data)
 					// Find smooth patterns and record smooths
 					while (true) // broken on no smooths found
 					{
-						let pattern = "";
+						let pattern = null;
 						let color = 0;
 						let orient = 0;
 						     if (a[ 0] != null && palEq(a[0], a[1]) && !palEq(a[0], a[2]) && !palEq(a[0], a[3]) && !palEq(a[0], a[4]) && !palEq(a[0], a[5])) { color = a[0].color; pattern = SmoothType.CORNER; orient =  4; a[0] = a[1] = null; }
@@ -252,34 +242,15 @@ function processSmooths(data)
 
 						else { break; }
 
-						if (pattern != "")
-						{
-							let newSmooth = vec3.fromValues(x, y, z);
-							newSmooth.type = "smooth";
-							newSmooth.color = color;
-							newSmooth.enabled = true;
-							newSmooth.pattern = pattern;
-							newSmooth.orientation = orient;
-							model.smooths.push(newSmooth);
-							let curCell = model.grid[x][y][z];
-							if (curCell == null)
-							{
-								model.grid[x][y][z] = newSmooth;
-							}
-							else if (curCell instanceof Float32Array)
-							{
-								model.grid[x][y][z] = [];
-								model.grid[x][y][z] = curCell;
-							}
-							else if (curCell instanceof Array)
-							{
-								model.grid[x][y][z].push(newSmooth);
-							}
-							if (configState.cellConfigs[JSON.stringify([x, y, z])] == CellConfig.NO_SMOOTH)
-							{
-								newSmooth.enabled = false;
-							}
-						}
+						let newSmooth = vec3.fromValues(x, y, z);
+						newSmooth.type = CellState.SMOOTH;
+						newSmooth.color = color;
+						newSmooth.pattern = pattern;
+						newSmooth.orientation = orient;
+						let cellConfigState = configState.cellConfigs[JSON.stringify([ x, y, z ])];
+						newSmooth.enabled = (!cellConfigState || !(cellConfigState & CellConfig.NO_SMOOTH));
+						model.smooths.push(newSmooth);
+						model.grid[x][y][z].smooths.push(newSmooth);
 					}
 				}
 			}

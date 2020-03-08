@@ -113,7 +113,7 @@ function exportObj(mtlName, pngName, data)
 	canvas.width = 256;
 	let context = canvas.getContext("2d");
 	let imageData = context.createImageData(256, 1);
-	for (var i = 0; i < 256; i++)
+	for (let i = 0; i < 256; i++)
 	{
 		imageData.data[i*4+0] = voxData.palette[i][0] * 256;
 		imageData.data[i*4+1] = voxData.palette[i][1] * 256;

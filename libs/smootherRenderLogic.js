@@ -161,7 +161,7 @@
 		{
 			const viewMatrix = getCamOrbitMatrix();
 
-			for (var k = 0; k < voxData.models.length; k++)
+			for (let k = 0; k < voxData.models.length; k++)
 			{
 				const model = voxData.models[k];
 				const s = model.centerOffset;
@@ -214,7 +214,7 @@
 			// Render config modifications
 			const s = voxData.models[0].centerOffset;
 			let color = vec3.fromValues(Math.random() * 0.5, Math.random() * 0.5, Math.random() * 0.5);
-			for (var i = 0; i < configControlHighlightedVoxels.length; i++)
+			for (let i = 0; i < configControlHighlightedVoxels.length; i++)
 			{
 				let c = configControlHighlightedVoxels[i];
 				const modelViewMatrix = mat4.create();

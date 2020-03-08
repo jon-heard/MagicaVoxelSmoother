@@ -86,10 +86,10 @@ function parseChunk_xyzi(data, offset)
 	const count = bin2Uint(data, offset);
 	offset += 4;
 	const byteData = new Uint8Array(data);
-	for (var i = 0; i < count; i++)
+	for (let i = 0; i < count; i++)
 	{
 		let newVoxel = vec3.fromValues(byteData[offset], byteData[offset+1], byteData[offset+2]);
-		newVoxel.type = "voxel";
+		newVoxel.type = CellState.VOXEL;
 		newVoxel.color = byteData[offset+3];
 		result.push(newVoxel);
 		offset += 4;
@@ -101,7 +101,7 @@ function parseChunk_rgba(data, offset)
 {
 	const byteData = new Uint8Array(data);
 	const result = [];
-	for (var i = 0; i < 256; i++)
+	for (let i = 0; i < 256; i++)
 	{
 		result.push(vec4.fromValues(byteData[offset], byteData[offset+1], byteData[offset+2], byteData[offset+3]));
 		offset += 4;
@@ -138,10 +138,10 @@ function bin2Uint(data, start)
 
 function int2Color(num) {
     num >>>= 0;
-    var b = (num & 0xFF),
+    let b = (num & 0xFF),
         g = ((num & 0xFF00) >>> 8),
         r = ((num & 0xFF0000) >>> 16),
-        a = ( (num & 0xFF000000) >>> 24 ) ;
+        a = ( (num & 0xFF000000) >>> 24 );
     return { r: r, g: g, b: b, a: a};
 }
 const defaultPalette = [
