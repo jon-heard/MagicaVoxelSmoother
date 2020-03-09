@@ -1,7 +1,7 @@
 
 	let gl;
 	let showSmoothUi;
-	let shaders = {};
+	const shaders = {};
 	const meshes = {};
 
 	// Each browser resize requires viewport recalculation
@@ -10,7 +10,7 @@
 		// Set canvas position (in the web document)
 		//   HACK: Flex-defined sizes are incompatible with updating canvas size (dynamically) to match.
 		//     Instead, 'viewSpace' div is positioned by flex while canvas is dynamically placed to match.
-		let viewSpace = document.getElementById("viewSpace");
+		const viewSpace = document.getElementById("viewSpace");
 		gl.canvas.style.left = viewSpace.offsetLeft;
 		gl.canvas.style.top = viewSpace.offsetTop;
 		gl.canvas.width = viewSpace.clientWidth;
@@ -169,11 +169,11 @@
 				// Render voxels
 				for (let i = 0; i < model.voxels.length; i++)
 				{
-					let v = model.voxels[i];
-					let vCentered = vec3.create();
+					const v = model.voxels[i];
+					const vCentered = vec3.create();
 					vec3.subtract(vCentered, v, s);
 					if (v.culled || (!v.enabled && showSmoothUi.checked)) { continue; }
-					let c = voxData.palette[v.color-1];
+					const c = voxData.palette[v.color-1];
 					const modelViewMatrix = mat4.create();
 					mat4.translate(modelViewMatrix, modelViewMatrix, vCentered);
 					mat4.multiply(modelViewMatrix, viewMatrix, modelViewMatrix);
@@ -185,12 +185,12 @@
 				{
 					for (let i = 0; i < model.smooths.length; i++)
 					{
-						let v = model.smooths[i];
-						let vCentered = vec3.create();
+						const v = model.smooths[i];
+						const vCentered = vec3.create();
 						vec3.subtract(vCentered, v, s);
 						if (v.culled || !v.enabled) { continue; }
 						if (!meshes.hasOwnProperty(v.pattern)) { continue; }
-						let c = voxData.palette[v.color-1];
+						const c = voxData.palette[v.color-1];
 						const modelViewMatrix = mat4.create();
 						mat4.translate(modelViewMatrix, modelViewMatrix, vCentered);
 						mat4.multiply(modelViewMatrix, modelViewMatrix, getOrientationMatrix(v.orientation));
@@ -213,10 +213,10 @@
 
 			// Render config modifications
 			const s = voxData.models[0].centerOffset;
-			let color = vec3.fromValues(Math.random() * 0.5, Math.random() * 0.5, Math.random() * 0.5);
+			const color = vec3.fromValues(Math.random() * 0.5, Math.random() * 0.5, Math.random() * 0.5);
 			for (let i = 0; i < configControlHighlightedVoxels.length; i++)
 			{
-				let c = configControlHighlightedVoxels[i];
+				const c = configControlHighlightedVoxels[i];
 				const modelViewMatrix = mat4.create();
 				mat4.translate(modelViewMatrix, modelViewMatrix, [c[0]-s[0], c[1]-s[1], c[2]-s[2]]);
 				mat4.multiply(modelViewMatrix, viewMatrix, modelViewMatrix);

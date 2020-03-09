@@ -88,7 +88,7 @@ function parseChunk_xyzi(data, offset)
 	const byteData = new Uint8Array(data);
 	for (let i = 0; i < count; i++)
 	{
-		let newVoxel = vec3.fromValues(byteData[offset], byteData[offset+1], byteData[offset+2]);
+		const newVoxel = vec3.fromValues(byteData[offset], byteData[offset+1], byteData[offset+2]);
 		newVoxel.type = CellState.VOXEL;
 		newVoxel.color = byteData[offset+3];
 		result.push(newVoxel);
@@ -138,7 +138,7 @@ function bin2Uint(data, start)
 
 function int2Color(num) {
     num >>>= 0;
-    let b = (num & 0xFF),
+    const b = (num & 0xFF),
         g = ((num & 0xFF00) >>> 8),
         r = ((num & 0xFF0000) >>> 16),
         a = ( (num & 0xFF000000) >>> 24 );

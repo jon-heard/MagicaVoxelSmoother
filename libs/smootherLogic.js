@@ -10,8 +10,8 @@ function palEq(voxel1, voxel2)
 	{
 		return;
 	}
-	let color1 = voxel1.color;
-	let color2 = voxel2.color;
+	const color1 = voxel1.color;
+	const color2 = voxel2.color;
 	// Combine 228-239 into smooth clusters of 4: [228,229,230,231], [232,233,234,235], [236,237,238,239]
 	if (color1 > 227 && color1 < 240)
 	{
@@ -124,7 +124,7 @@ function processConfigData(data)
 		for (let k = 0; k < model.voxels.length; k++)
 		{
 			const v = model.voxels[k];
-			let cellConfigState = configState.cellConfigs[JSON.stringify([ v[0], v[1], v[2] ])];
+			const cellConfigState = configState.cellConfigs[JSON.stringify([ v[0], v[1], v[2] ])];
 			v.enabled = (!cellConfigState || !(cellConfigState & CellConfig.NO_VOXEL));
 		}
 
@@ -173,7 +173,7 @@ function processSmooths(data)
 					}
 
 					// Get adjacent cell states
-					let a = new Array(18).fill(null);
+					const a = new Array(18).fill(null);
 					let hasAdjacent = false;
 					if (getCellState(getCell(model, [x-1, y, z])) == CellState.VOXEL) { a[0] = getCell(model, [x-1, y, z]).voxel; hasAdjacent = true; }
 					if (getCellState(getCell(model, [x, y-1, z])) == CellState.VOXEL) { a[1] = getCell(model, [x, y-1, z]).voxel; hasAdjacent = true; }
@@ -242,12 +242,12 @@ function processSmooths(data)
 
 						else { break; }
 
-						let newSmooth = vec3.fromValues(x, y, z);
+						const newSmooth = vec3.fromValues(x, y, z);
 						newSmooth.type = CellState.SMOOTH;
 						newSmooth.color = color;
 						newSmooth.pattern = pattern;
 						newSmooth.orientation = orient;
-						let cellConfigState = configState.cellConfigs[JSON.stringify([ x, y, z ])];
+						const cellConfigState = configState.cellConfigs[JSON.stringify([ x, y, z ])];
 						newSmooth.enabled = (!cellConfigState || !(cellConfigState & CellConfig.NO_SMOOTH));
 						model.smooths.push(newSmooth);
 						model.grid[x][y][z].smooths.push(newSmooth);

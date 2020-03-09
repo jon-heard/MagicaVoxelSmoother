@@ -1,10 +1,10 @@
 
 function exportObj(mtlName, pngName, data)
 {
-	let v = [];			// vertices
-	let vt_indexToColor = [];	// Need to save colors by contiguous index
-	let vt_colorToIndex = {};	// Need to lookup color index by each voxel's color
-	let f = [];			// faces
+	const v = [];			// vertices
+	const vt_indexToColor = [];	// Need to save colors by contiguous index
+	const vt_colorToIndex = {};	// Need to lookup color index by each voxel's color
+	const f = [];			// faces
 
 	// Fill OBJ data structure
 	for (let i = 0; i < voxData.models.length; i++)
@@ -15,7 +15,7 @@ function exportObj(mtlName, pngName, data)
 		let mesh = meshes[SmoothType.VOXEL].mesh;
 		for (let i = 0; i < model.voxels.length; i++)
 		{
-			let voxel = model.voxels[i];
+			const voxel = model.voxels[i];
 			if (!voxel.enabled || voxel.culled)
 			{
 				continue;
@@ -34,11 +34,13 @@ function exportObj(mtlName, pngName, data)
 			}
 
 			// vertices
-			let vStart = v.length+1;
+			const vStart = v.length+1;
 			for (let i = 0; i < mesh.vertices.length; i += 3)
 			{
-				v.push({ x: mesh.vertices[i+0]+voxel[0]-model.centerOffset[0], y: mesh.vertices[i+1]+voxel[1]-model.centerOffset[1], z: mesh.vertices[i+2]+voxel[2] });
-				
+				const newVertex = vec3.fromValues(mesh.vertices[i+0], mesh.vertices[i+1], mesh.vertices[i+2]);
+				vec3.add(newVertex, newVertex, voxel);
+				vec3.subtract(newVertex, newVertex, [model.centerOffset[0], model.centerOffset[1], 0]);
+				v.push(newVertex);
 			}
 
 			// faces
@@ -51,13 +53,13 @@ function exportObj(mtlName, pngName, data)
 		// Smooths
 		for (let i = 0; i < model.smooths.length; i++)
 		{
-			let voxel = model.smooths[i];
+			const voxel = model.smooths[i];
 			if (!voxel.enabled)
 			{
 				continue;
 			}
 			mesh = meshes[voxel.pattern].mesh;
-			let orientation = getOrientationMatrix(voxel.orientation);
+			const orientation = getOrientationMatrix(voxel.orientation);
 
 			// color
 			let colorIndex = 1;
@@ -72,12 +74,14 @@ function exportObj(mtlName, pngName, data)
 			}
 
 			// vertices
-			let vStart = v.length+1;
+			const vStart = v.length+1;
 			for (let i = 0; i < mesh.vertices.length; i += 3)
 			{
-				let vertex = vec3.fromValues(mesh.vertices[i], mesh.vertices[i+1], mesh.vertices[i+2]);
-				vec3.transformMat4(vertex, vertex, orientation);
-				v.push({ x: vertex[0]+voxel[0]-model.centerOffset[0], y: vertex[1]+voxel[1]-model.centerOffset[1], z: vertex[2]+voxel[2] });
+				const newVertex = vec3.fromValues(mesh.vertices[i], mesh.vertices[i+1], mesh.vertices[i+2]);
+				vec3.transformMat4(newVertex, newVertex, orientation);
+				vec3.add(newVertex, newVertex, voxel);
+				vec3.subtract(newVertex, newVertex, [model.centerOffset[0], model.centerOffset[1], 0]);
+				v.push(newVertex);
 			}
 
 			// faces
@@ -89,7 +93,7 @@ function exportObj(mtlName, pngName, data)
 	}
 
 	// Create OBJ string
-	let result = {};
+	const result = {};
 	result.obj = "mtllib " + mtlName + "\nusemtl palette\n";
 	for (let i = 0; i < v.length; i++)
 	{
@@ -108,17 +112,17 @@ function exportObj(mtlName, pngName, data)
 	result.mtl = "newmtl palette\nmap_Kd " + pngName;
 
 	// Create PNG img
-	let canvas = document.createElement('canvas');
+	const canvas = document.createElement('canvas');
 	canvas.height = 1;
 	canvas.width = 256;
-	let context = canvas.getContext("2d");
-	let imageData = context.createImageData(256, 1);
+	const context = canvas.getContext("2d");
+	const imageData = context.createImageData(256, 1);
 	for (let i = 0; i < 256; i++)
 	{
 		imageData.data[i*4+0] = voxData.palette[i][0] * 256;
 		imageData.data[i*4+1] = voxData.palette[i][1] * 256;
 		imageData.data[i*4+2] = voxData.palette[i][2] * 256;
-		imageData.data[i*4+3] = 1.0;
+		imageData.data[i*4+3] = 255;
 	}
 	context.putImageData(imageData, 0, 0);
 	result.png = canvas.toDataURL("image/png");

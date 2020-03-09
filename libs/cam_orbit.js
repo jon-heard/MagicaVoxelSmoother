@@ -40,7 +40,7 @@ function getCamOrbitPosition()
 	mat4.rotate(viewMat, viewMat, -viewRotX, [0, 0, 1]);
 	mat4.rotate(viewMat, viewMat, -viewRotY, [1, 0, 0]);
 	mat4.translate(viewMat, viewMat, [0, 0, viewZoom]);
-	let result = vec3.create();
+	const result = vec3.create();
 	vec3.transformMat4(result, result, viewMat);
 	return result;
 }

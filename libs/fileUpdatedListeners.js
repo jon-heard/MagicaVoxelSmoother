@@ -59,8 +59,7 @@ fileUpdatedListeners = {
 			case fileUpdatedListeners.fileType.FILE_SELECTOR:
 				return new Date(listener.file.files[0].lastModified)
 			case fileUpdatedListeners.fileType.NATIVE_FILE:
-				let file = await listener.file.getFile();
-				return new Date(file.lastModified)
+				return new Date(await listener.file.getFile())
 			case fileUpdatedListeners.fileType.UNKNOWN:
 				return null;
 		}
@@ -73,8 +72,7 @@ fileUpdatedListeners = {
 			case fileUpdatedListeners.fileType.FILE_SELECTOR:
 				return listener.file.files[0];
 			case fileUpdatedListeners.fileType.NATIVE_FILE:
-				let file = await listener.file.getFile();
-				return file;
+				return await listener.file.getFile();
 			case fileUpdatedListeners.fileType.UNKNOWN:
 				return null;
 		}

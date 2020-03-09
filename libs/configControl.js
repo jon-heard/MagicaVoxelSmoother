@@ -49,7 +49,7 @@ function updateConfigControlTool()
 function configControl_onMouseHover(evt)
 {
 	if (!voxData) { return; }
-	let ray = getRayFromScreenCoordinates(evt.layerX, evt.layerY);
+	const ray = getRayFromScreenCoordinates(evt.layerX, evt.layerY);
 	let info = "&nbsp;";
 	configControlSelector = null;
 	let i = 0;
@@ -57,7 +57,7 @@ function configControl_onMouseHover(evt)
 	while (rayStage != 2 && (rayStage > 0 || i < 500))
 	{
 		if (configControlSelector) { break; }
-		let rayIteration = vec3.create();
+		const rayIteration = vec3.create();
 		vec3.scaleAndAdd(rayIteration, ray.start, ray.dir, i);
 		for (let i = 0; i < voxData.models.length; i++)
 		{
@@ -125,7 +125,7 @@ function configControl_onMouseUp(evt)
 	if (evt.button == 0 && configControlTool != 0 && configControlSelector != null && configControlClickingSelector == configControlSelector)
 	{
 		configControlClickingSelector = null;
-		let key = JSON.stringify([ configControlSelector[0], configControlSelector[1], configControlSelector[2] ]);
+		const key = JSON.stringify([ configControlSelector[0], configControlSelector[1], configControlSelector[2] ]);
 		if (configState.cellConfigs.hasOwnProperty(key) && configState.cellConfigs[key] & configControlTool)
 		{
 			configState.cellConfigs[key] &= ~configControlTool;
@@ -138,7 +138,6 @@ function configControl_onMouseUp(evt)
 		{
 			configState.cellConfigs[key] |= configControlTool;
 		}
-		let cell = getCell(voxData.models[0], configControlSelector);
 		processConfigData(voxData);
 		updateConfigControlTool();
 	}

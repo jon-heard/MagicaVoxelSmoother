@@ -189,7 +189,7 @@
 	{
 		if(element && document.createEvent)
 		{
-			let evt = document.createEvent("MouseEvents");
+			const evt = document.createEvent("MouseEvents");
 			evt.initEvent("click", true, false);
 			element.dispatchEvent(evt);
 		}
@@ -204,7 +204,7 @@
 		try
 		{
 			alert("Choose the MagicaVoxel model to smooth");
-			let newVoxFile = await chooseFileSystemEntries({ type: "openFile", excludeAcceptAllOption: true, accepts: [{ description: "VOX - MagicaVoxel model", extensions: ["vox"]}] });
+			const newVoxFile = await chooseFileSystemEntries({ type: "openFile", excludeAcceptAllOption: true, accepts: [{ description: "VOX - MagicaVoxel model", extensions: ["vox"]}] });
 			let newMvsFile;
 			try
 			{
@@ -217,11 +217,11 @@
 				newMvsFile = await chooseFileSystemEntries({ type: "saveFile", excludeAcceptAllOption: true, accepts: [{ description: "MVS - MagicaVoxel smooth customization", extensions: ["mvs"]}] });
 			}
 			alert("Create a 3d model file to export the smoothing to.");
-			let newObjFile = await chooseFileSystemEntries({ type: "saveFile", excludeAcceptAllOption: true, accepts: [{ description: "OBJ - 3D model", extensions: ["obj"]}] });
+			const newObjFile = await chooseFileSystemEntries({ type: "saveFile", excludeAcceptAllOption: true, accepts: [{ description: "OBJ - 3D model", extensions: ["obj"]}] });
 			alert("Create a texture file to export the smoothing to.");
-			let newPngFile = await chooseFileSystemEntries({ type: "saveFile", excludeAcceptAllOption: true, accepts: [{ description: "PNG - 3d model texture", extensions: ["png"]}] });
+			const newPngFile = await chooseFileSystemEntries({ type: "saveFile", excludeAcceptAllOption: true, accepts: [{ description: "PNG - 3d model texture", extensions: ["png"]}] });
 			alert("Create a material file to attach the texture to the model.");
-			let newMtlFile = await chooseFileSystemEntries({ type: "saveFile", excludeAcceptAllOption: true, accepts: [{ description: "MTL - 3D model material", extensions: ["mtl"]}] });
+			const newMtlFile = await chooseFileSystemEntries({ type: "saveFile", excludeAcceptAllOption: true, accepts: [{ description: "MTL - 3D model material", extensions: ["mtl"]}] });
 
 			voxFile = newVoxFile;
 			mvsFile = newMvsFile;
@@ -246,7 +246,7 @@
 
 	function downloadNewFile(filename, content, isRawContent)
 	{
-		let e = document.createElement("a");
+		const e = document.createElement("a");
 		e.setAttribute("download", filename);
 		if (isRawContent)
 		{
@@ -264,8 +264,8 @@
 
 	function onManualExport()
 	{
-		let modelName = document.getElementById("voxFilename").innerHTML.replace(".vox", "");
-		let objModel = exportObj(modelName + ".mtl", modelName + ".png", voxData);
+		const modelName = document.getElementById("voxFilename").innerHTML.replace(".vox", "");
+		const objModel = exportObj(modelName + ".mtl", modelName + ".png", voxData);
 		downloadNewFile(modelName + ".obj", objModel.obj);
 		downloadNewFile(modelName + ".mtl", objModel.mtl);
 		downloadNewFile(modelName + ".png", objModel.png, true);
@@ -273,9 +273,9 @@
 
 	function base64ToArrayBuffer(base64)
 	{
-		let binary_string =  window.atob(base64);
-		let len = binary_string.length;
-		let bytes = new Uint8Array( len );
+		const binary_string =  window.atob(base64);
+		const len = binary_string.length;
+		const bytes = new Uint8Array( len );
 		for (let i = 0; i < len; i++)
 		{
 			bytes[i] = binary_string.charCodeAt(i);
@@ -285,9 +285,9 @@
 
 	async function autoExport()
 	{
-		let mtlName = (await mtlFile.getFile()).name;
-		let pngName = (await pngFile.getFile()).name;
-		let objModel = exportObj(mtlName, pngName, voxData);
+		const mtlName = (await mtlFile.getFile()).name;
+		const pngName = (await pngFile.getFile()).name;
+		const objModel = exportObj(mtlName, pngName, voxData);
 
 		const objWriter = await objFile.createWriter();
 		await objWriter.write(0, objModel.obj);

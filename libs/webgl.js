@@ -76,10 +76,9 @@ function createShader(gl, vSrc, fSrc, attributes, uniforms)
 function renderMesh(gl, mesh, shader, color, modelViewMatrix, drawAsOutline)
 {
 	const hasNormals = shader.uniforms.hasOwnProperty("matNormal");
-	let normalMatrix;
+	const normalMatrix = mat4.create();
 	if (hasNormals)
 	{
-		normalMatrix = mat4.create();
 		mat4.invert(normalMatrix, modelViewMatrix);
 		mat4.transpose(normalMatrix, normalMatrix);
 	}
@@ -116,52 +115,50 @@ function updateViewPortAndProjectionMatrix(viewWidth, viewHeight)
 
 function getRayFromScreenCoordinates(x, y)
 {
-	let up = vec3.fromValues(0, 0, -1);
-
 	// Camera position
-	let viewPos = getCamOrbitPosition();
+	const viewPos = getCamOrbitPosition();
 
 	// lookat - Vector from camera to origin (what it's looking at) normalized
-	let lookat = vec3.clone(viewPos);
+	const lookat = vec3.clone(viewPos);
 	vec3.scale(lookat, lookat, -1);
 	vec3.normalize(lookat, lookat);
 
 	// Near-clip-plane axis directions
-	let nearPlaneX = vec3.create();
+	const nearPlaneX = vec3.create();
 		// Near-clip
-		vec3.cross(nearPlaneX, up, lookat);
+		vec3.cross(nearPlaneX, [0,0,-1], lookat);
 		vec3.normalize(nearPlaneX, nearPlaneX);
-	let nearPlaneY = vec3.create();
+	const nearPlaneY = vec3.create();
 		vec3.cross(nearPlaneY, lookat, nearPlaneX);
 		vec3.normalize(nearPlaneY, nearPlaneY);
 
 	// Near-clip-plane axis sizes
 	// Y = angle-opposite (length of Y) divided by angle-adjacent (near-clip-distance) multiplied by angle-adjacent
-	let nearPlaneYLength = Math.tan(projectionYRadius / 2) * nearClipPlaneDistance;
+	const nearPlaneYLength = Math.tan(projectionYRadius / 2) * nearClipPlaneDistance;
 	// X = Y * canvas size ratio
-	let nearPlaneXLength = nearPlaneYLength * (gl.canvas.width / gl.canvas.height);
+	const nearPlaneXLength = nearPlaneYLength * (gl.canvas.width / gl.canvas.height);
 
 	// Near-clip-plane axis directions and axis sizes
 	vec3.scale(nearPlaneX, nearPlaneX, nearPlaneXLength);
 	vec3.scale(nearPlaneY, nearPlaneY, nearPlaneYLength);
 
 	// Screen size halved
-	let screenHalfX = gl.canvas.width / 2;
-	let screenHalfY = gl.canvas.height / 2;
+	const screenHalfX = gl.canvas.width / 2;
+	const screenHalfY = gl.canvas.height / 2;
 
 	// Screen coordinates translated relative to center screen and then de-united (-1 to 1)
 	x = (x - screenHalfX) / screenHalfX;
 	y = (y - screenHalfY) / screenHalfY;
 
 	// Ray's start is the view's position...
-	let rayStart = vec3.clone(viewPos);
+	const rayStart = vec3.clone(viewPos);
 	// ...Plus the near-clip-distance down the lookat vector...
 	vec3.scaleAndAdd(rayStart, rayStart, lookat, nearClipPlaneDistance);
 	vec3.scaleAndAdd(rayStart, rayStart, nearPlaneX, x);
 	vec3.scaleAndAdd(rayStart, rayStart, nearPlaneY, y);
 
 	// Ray's direction is from camera's position to ray's start (ie. place on near plane mapped to mouse)
-	let rayDir = vec3.create();
+	const rayDir = vec3.create();
 	vec3.subtract(rayDir, rayStart, viewPos);
 	vec3.normalize(rayDir, rayDir);
 
