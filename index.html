@@ -47,7 +47,7 @@
 			{
 				position: absolute;
 			}
-			#hiddenVoxFileSelector, #hiddenMvsFileSelector, #manualExport
+			#hiddenVoxFileSelector, #hiddenMvsFileSelector, #manualExport_obj, #manualExport_mvs
 			{
 				display: none;
 			}
@@ -70,7 +70,8 @@
 			<button id='mvsFileSelector'>Open smoothing config</button>
 			<span id='mvsFilename'></span>
 			<span id='objFilename'></span>
-			<button id='manualExport'>Export OBJ model</button>
+			<button id='manualExport_obj'>Export OBJ model</button>
+			<button id='manualExport_mvs'>Export smoothing config</button>
 			<input type='file' id='hiddenVoxFileSelector' accept='.vox'/>
 			<input type='file' id='hiddenMvsFileSelector' accept='.mvs'/>
 			<input type='checkbox' id='showSmooth' checked>Show smoothing</input>
@@ -109,7 +110,8 @@
 			document.getElementById("objFilename").style.display = "none";
 			document.getElementById("mvsFileSelector").addEventListener("click", onMvsFileSelectorClicked);
 			document.getElementById("hiddenVoxFileSelector").addEventListener("change", onFileSelect);
-			document.getElementById("manualExport").addEventListener("click", onManualExport);
+			document.getElementById("manualExport_obj").addEventListener("click", onmanualExport_obj);
+			document.getElementById("manualExport_mvs").addEventListener("click", onmanualExport_mvs);
 			document.getElementById("voxFileSelector").addEventListener("click", onVoxFileSelectorClicked);
 			fileUpdatedListeners.add(document.getElementById("hiddenVoxFileSelector"), onVoxFileUpdated);
 			fileUpdatedListeners.add(document.getElementById("hiddenMvsFileSelector"), onMvsFileUpdated);
@@ -149,8 +151,6 @@
 		const reader = new FileReader();
 		reader.onload = function()
 		{
-			document.getElementById('voxFilename').innerHTML = file.name;
-			onResize();
 			voxData = parseVox(reader.result);
 			smoother_processVoxData(voxData);
 			if (usingNativeFileIO)
@@ -159,8 +159,11 @@
 			}
 			else
 			{
-				document.getElementById("manualExport").style.display = "unset";
+				document.getElementById("manualExport_obj").style.display = "unset";
+				document.getElementById("manualExport_mvs").style.display = "unset";
 			}
+			document.getElementById('voxFilename').innerHTML = file.name;
+			window.dispatchEvent(new Event('resize'));
 		};
 		reader.readAsArrayBuffer(file);
 	}
@@ -172,14 +175,14 @@
 		const reader = new FileReader();
 		reader.onload = function()
 		{
-			document.getElementById('mvsFilename').innerHTML = file.name;
-			onResize();
 			setConfigState(JSON.parse(bin2Str(reader.result, 0, reader.result.byteLength)));
 			processConfigData(voxData);
 			if (usingNativeFileIO)
 			{
 				autoExport();
 			}
+			document.getElementById('voxFilename').innerHTML = file.name;
+			window.dispatchEvent(new Event('resize'));
 		};
 		reader.readAsArrayBuffer(file);
 	}
@@ -262,13 +265,24 @@
 		document.body.removeChild(e);
 	}
 
-	function onManualExport()
+	function onmanualExport_obj()
 	{
 		const modelName = document.getElementById("voxFilename").innerHTML.replace(".vox", "");
 		const objModel = exportObj(modelName + ".mtl", modelName + ".png", voxData);
 		downloadNewFile(modelName + ".obj", objModel.obj);
 		downloadNewFile(modelName + ".mtl", objModel.mtl);
 		downloadNewFile(modelName + ".png", objModel.png, true);
+	}
+
+	function onmanualExport_mvs()
+	{
+		let filename = document.getElementById("mvsFilename").innerHTML;
+		if (filename == "")
+		{
+			filename = document.getElementById("voxFilename").innerHTML.replace(".vox", ".mvs");
+		}
+		const content = JSON.stringify(configState);
+		downloadNewFile(filename, content);
 	}
 
 	function base64ToArrayBuffer(base64)
